@@ -1,7 +1,10 @@
-# LegacyOS Lite on Vercel (Private Demo Deployment)
+# LegacyOS Lite on Vercel
 
-This repo can be deployed to Vercel as a private repository preview app while keeping
-core ownership protections intact.
+Copyright (c) 2026 Vishalan Karunanithi.
+All Rights Reserved.
+This repository is published for hackathon review only. No permission is granted to copy, modify, distribute, sublicense, or commercially use this software without written permission.
+
+This repo can be deployed to Vercel as a hackathon review app while keeping the repository ownership notice visible.
 
 ## What this setup supports
 
@@ -14,7 +17,7 @@ Note:
 `/api/index.py` points SQLite to `/tmp/legacyoslite.db`, which is ephemeral in serverless hosting.
 Use this for demo workflows and not for production persistence.
 
-## 1) Create private GitHub repo
+## 1) Prepare GitHub repo
 
 From your existing local history:
 
@@ -26,13 +29,13 @@ git remote add origin git@github.com:YOUR_ORG_OR_USER/legacyos-lite.git
 git push -u origin main
 ```
 
-Set repository visibility to **Private** in GitHub.
+Set repository visibility according to your review needs. For public hackathon review, keep the ownership notice and `LICENSE` file in place.
 
 ## 2) Connect to Vercel
 
 In Vercel:
 
-1. Create/import a new project from your private GitHub repository.
+1. Create/import a new project from your GitHub repository.
 2. Framework detection: `Other`.
 3. Root Directory: `.`.
 4. Install Command: `pip install -r requirements.txt`.
@@ -49,9 +52,9 @@ Optional environment variable:
 
 ## 3) Recommended deployment guardrails
 
-- Keep the repo private.
+- Keep repository ownership notices in place.
 - Do not commit `.env` or secrets.
-- Share only screenshot/video of the demo UI publicly.
+- Share only demo-safe sample data publicly.
 - For stronger persistence, replace `LEGACYOSLITE_DB_PATH` with an external DB during future hardening.
 
 ## 4) Quick verification after deploy

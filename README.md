@@ -1,8 +1,12 @@
 # LegacyOS Lite
 
-LegacyOS Lite is the hackathon-focused version of LegacyOS: a one-week demo that captures role knowledge, generates AI-style summaries, builds a knowledge graph, scores continuity risk, and supports question answering.
+Copyright (c) 2026 Vishalan Karunanithi.
+All Rights Reserved.
+This repository is published for hackathon review only. No permission is granted to copy, modify, distribute, sublicense, or commercially use this software without written permission.
 
-This app is intentionally optimized for demo impact over enterprise completeness.
+LegacyOS Lite is a hackathon demo that captures role knowledge, generates AI-style summaries, builds a knowledge graph, scores continuity risk, and supports question answering.
+
+This app is intentionally optimized for demo impact and clear product evaluation.
 
 ## Current Sprint
 
@@ -53,7 +57,7 @@ Deployment options:
   PYTHONPATH=backend ../.venv/bin/uvicorn legacyos_lite.main:app --reload --port 8010
   ```
 
-- Vercel private preview (private GitHub repo + Vercel):
+- Vercel preview (GitHub repo + Vercel):
 
   1. Import `https://github.com/Vishingvell/legacyos-lite` into a new Vercel project.
   2. Deploy from the latest `main` commit.

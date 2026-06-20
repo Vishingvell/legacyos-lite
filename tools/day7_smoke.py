@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Vishalan Karunanithi.
+# All Rights Reserved.
+# This repository is published for hackathon review only. No permission is granted to copy,
+# modify, distribute, sublicense, or commercially use this software without written permission.
+
 """Lightweight Day 7 smoke checks for LegacyOS Lite."""
 
 from __future__ import annotations

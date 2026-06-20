@@ -1,10 +1,7 @@
-# Copyright (c) 2026 Vishalan Karunanithi
-#
+# Copyright (c) 2026 Vishalan Karunanithi.
 # All Rights Reserved.
-#
-# Unauthorized copying, modification,
-# distribution, or commercial use
-# is prohibited.
+# This repository is published for hackathon review only. No permission is granted to copy,
+# modify, distribute, sublicense, or commercially use this software without written permission.
 
 from __future__ import annotations
 

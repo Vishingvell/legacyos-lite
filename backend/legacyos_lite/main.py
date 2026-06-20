@@ -1,10 +1,7 @@
-# Copyright (c) 2026 Vishalan Karunanithi
-#
+# Copyright (c) 2026 Vishalan Karunanithi.
 # All Rights Reserved.
-#
-# Unauthorized copying, modification,
-# distribution, or commercial use
-# is prohibited.
+# This repository is published for hackathon review only. No permission is granted to copy,
+# modify, distribute, sublicense, or commercially use this software without written permission.
 
 from __future__ import annotations
 
@@ -81,7 +78,7 @@ def _allowed_origins() -> list[str]:
         origins.append(f"https://{vercel_origin.strip('/')}")
     if env_origins:
         origins.extend(item.strip() for item in env_origins.split(",") if item.strip())
-    # Preserve local/private order while de-duplicating.
+    # Preserve configured origin order while de-duplicating.
     deduped: list[str] = []
     seen = set()
     for origin in origins:
