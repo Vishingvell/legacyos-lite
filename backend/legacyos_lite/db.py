@@ -203,6 +203,47 @@ def get_latest_interview() -> dict[str, Any] | None:
     return get_interview(row["id"]) if row else None
 
 
+def list_interview_summaries(limit: int = 50) -> list[dict[str, Any]]:
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                interviews.id,
+                interviews.role,
+                interviews.summary,
+                interviews.profile_json,
+                interviews.risk_score,
+                interviews.risk_level,
+                interviews.created_at,
+                COUNT(entities.id) AS entity_count
+            FROM interviews
+            LEFT JOIN entities ON entities.interview_id = interviews.id
+            GROUP BY interviews.id
+            ORDER BY interviews.created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    summaries = []
+    for row in rows:
+        profile = json.loads(row["profile_json"])
+        summaries.append(
+            {
+                "id": row["id"],
+                "role": row["role"],
+                "summary": row["summary"],
+                "risk_score": row["risk_score"],
+                "risk_level": row["risk_level"],
+                "created_at": row["created_at"],
+                "coverage": profile.get("coverage", "Starter"),
+                "top_entities": profile.get("top_entities", [])[:5],
+                "entity_count": row["entity_count"],
+            }
+        )
+    return summaries
+
+
 def get_interview(interview_id: str) -> dict[str, Any]:
     with connect() as conn:
         interview = conn.execute("SELECT * FROM interviews WHERE id = ?", (interview_id,)).fetchone()
@@ -322,6 +363,67 @@ def get_repository_notes(limit: int = 25, interview_id: str | None = None) -> li
                 LIMIT ?
                 """,
                 (interview_id, limit),
+            ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_relevant_repository_notes(
+    *,
+    limit: int = 25,
+    interview_id: str | None = None,
+    role: str | None = None,
+) -> list[dict[str, Any]]:
+    with connect() as conn:
+        if interview_id is not None and role is not None:
+            rows = conn.execute(
+                """
+                SELECT id, interview_id, role, source, title, content, created_at
+                FROM repository_notes
+                WHERE interview_id = ?
+                   OR lower(role) = lower(?)
+                   OR role IS NULL
+                ORDER BY
+                    CASE
+                        WHEN interview_id = ? THEN 0
+                        WHEN lower(role) = lower(?) THEN 1
+                        ELSE 2
+                    END,
+                    created_at DESC
+                LIMIT ?
+                """,
+                (interview_id, role, interview_id, role, limit),
+            ).fetchall()
+        elif interview_id is not None:
+            rows = conn.execute(
+                """
+                SELECT id, interview_id, role, source, title, content, created_at
+                FROM repository_notes
+                WHERE interview_id = ? OR role IS NULL
+                ORDER BY CASE WHEN interview_id = ? THEN 0 ELSE 1 END, created_at DESC
+                LIMIT ?
+                """,
+                (interview_id, interview_id, limit),
+            ).fetchall()
+        elif role is not None:
+            rows = conn.execute(
+                """
+                SELECT id, interview_id, role, source, title, content, created_at
+                FROM repository_notes
+                WHERE lower(role) = lower(?) OR role IS NULL
+                ORDER BY CASE WHEN lower(role) = lower(?) THEN 0 ELSE 1 END, created_at DESC
+                LIMIT ?
+                """,
+                (role, role, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT id, interview_id, role, source, title, content, created_at
+                FROM repository_notes
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
             ).fetchall()
     return [dict(row) for row in rows]
 

@@ -23,8 +23,10 @@ from legacyos_lite.db import (
     delete_repository_note,
     get_interview,
     get_latest_interview,
+    get_relevant_repository_notes,
     get_repository_notes,
     initialize_database,
+    list_interview_summaries,
     save_interview,
     save_repository_note,
     save_search_query,
@@ -209,6 +211,15 @@ def latest_interview() -> dict[str, Any]:
     return latest
 
 
+@app.get("/api/interviews")
+def list_interviews(limit: int = 50) -> dict[str, Any]:
+    if limit <= 0:
+        raise HTTPException(status_code=400, detail="Limit must be at least 1.")
+    if limit > 200:
+        raise HTTPException(status_code=400, detail="Limit must be 200 or fewer.")
+    return {"interviews": list_interview_summaries(limit=limit)}
+
+
 @app.get("/api/interviews/{interview_id}")
 def read_interview(interview_id: str) -> dict[str, Any]:
     try:
@@ -330,9 +341,11 @@ def search(payload: SearchRequest) -> dict[str, Any]:
     interview = _load_interview_or_latest(payload.interview_id)
     notes = []
     if payload.include_repository_notes:
-        notes = get_repository_notes(limit=12, interview_id=interview["id"])
-        if not notes:
-            notes = get_repository_notes(limit=12)
+        notes = get_relevant_repository_notes(
+            limit=12,
+            interview_id=interview["id"],
+            role=interview.get("role"),
+        )
     result = answer_question(payload.question, interview, interview["entities"], notes)
     answer = result["answer"] if isinstance(result, dict) else result
     saved = save_search_query(interview["id"], payload.question, answer)

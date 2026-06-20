@@ -316,6 +316,69 @@ h2 {
   gap: 16px;
 }
 
+.profileDirectory {
+  margin-bottom: 16px;
+}
+
+.compactHeader {
+  margin-bottom: 10px;
+}
+
+.profileCardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profileSummaryCard {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  min-height: 156px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  text-align: left;
+}
+
+.profileSummaryCard:hover,
+.profileSummaryCard:focus-visible,
+.profileSummaryCard.active {
+  border-color: var(--green);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 124, 102, 0.13), var(--shadow);
+}
+
+.profileRole {
+  color: var(--green);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.profileSummaryCard strong {
+  font-size: 1.45rem;
+}
+
+.profileMeta {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.profileSummaryCard p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.profileSummaryCard .riskPill {
+  justify-self: start;
+  margin-top: 2px;
+}
+
 .panel {
   padding: 20px;
 }
@@ -855,9 +918,21 @@ input {
   font-size: 0.83rem;
 }
 
+.sourceDetail summary em {
+  color: #52605a;
+  font-size: 0.85rem;
+  font-style: normal;
+  line-height: 1.4;
+}
+
 .sourceDetail p {
   margin: 10px 0 0;
   white-space: pre-wrap;
+}
+
+.sourceDetail:not([open]) p,
+.sourceDetail:not([open]) .sourceRemoveButton {
+  display: none;
 }
 
 .sourceRemoveButton {
@@ -895,6 +970,10 @@ textarea:focus-visible {
   .dashboardGrid {
     grid-template-columns: 1fr;
   }
+
+  .profileCardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1100px) {
@@ -921,7 +1000,8 @@ textarea:focus-visible {
   }
 
   .metricGrid,
-  .roleGrid {
+  .roleGrid,
+  .profileCardGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -944,6 +1024,7 @@ textarea:focus-visible {
 
   .metricGrid,
   .roleGrid,
+  .profileCardGrid,
   .searchBar {
     grid-template-columns: 1fr;
   }

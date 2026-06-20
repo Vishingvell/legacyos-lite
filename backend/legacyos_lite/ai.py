@@ -263,14 +263,12 @@ def answer_question(
     answer_bank = " ".join(interview.get("answers", {}).values())
     timeline_events = interview.get("timeline", [])
 
-    source_summary: list[dict[str, Any]] = [
-        {
-            "kind": "interview",
-            "title": f"{interview.get('role', 'Interview')} profile",
-            "excerpt": _sentence_preview(summary, 30),
-            "content": summary,
-        }
-    ]
+    interview_source: dict[str, Any] = {
+        "kind": "interview",
+        "title": f"{interview.get('role', 'Interview')} profile",
+        "excerpt": _sentence_preview(summary, 30),
+        "content": summary,
+    }
 
     matched_entities = [
         entity["name"]
@@ -279,22 +277,8 @@ def answer_question(
     ][:5]
 
     note_hits = _rank_repository_notes(normalized_question, repository_notes or [])
-    if note_hits:
-        source_summary.extend(
-            [
-                {
-                    "kind": "note",
-                    "id": note.get("id", ""),
-                    "title": note["title"],
-                    "source": note.get("source", ""),
-                    "role": note.get("role", ""),
-                    "created_at": note.get("created_at", ""),
-                    "excerpt": _sentence_preview(note["content"], 42),
-                    "content": note["content"],
-                }
-                for note in note_hits[:3]
-            ]
-        )
+    note_sources = [_repository_note_source(note) for note in note_hits[:3]]
+    interview_sources = [interview_source]
 
     asks_about_risk = any(term in normalized_question for term in ("risk", "score", "exposure"))
     asks_about_dependency = any(term in normalized_question for term in ("who", "depend", "dependency", "people", "team"))
@@ -312,25 +296,30 @@ def answer_question(
 
     if asks_about_risk:
         if note_hits:
+            include_profile_context = _note_belongs_to_interview_context(note_hits[0], interview)
+            profile_context = (risk_level, risk_score) if include_profile_context else (None, None)
             return {
-                "answer": _repository_risk_answer(note_hits[0], risk_level, risk_score),
-                "source_summary": source_summary,
+                "answer": _repository_risk_answer(note_hits[0], profile_context[0], profile_context[1]),
+                "source_summary": _repository_grounded_sources(note_sources, interview_source, include_profile_context),
                 "model": "rule",
                 "answer_style": "repository-risk-summary",
             }
         drivers = ", ".join(profile.get("risk_drivers", [])[:4]) or "limited documentation signals"
         return {
             "answer": f"Current risk is {risk_level} at {risk_score}/100. Main drivers: {drivers}.",
-            "source_summary": source_summary,
+            "source_summary": interview_sources,
             "model": "rule",
             "answer_style": "risk-summary",
         }
 
     if asks_about_dependency:
         if note_hits:
+            include_profile_context = _note_belongs_to_interview_context(note_hits[0], interview)
+            profile_context = profile if include_profile_context else {}
+            entity_context = entities if include_profile_context else []
             return {
-                "answer": _repository_dependency_answer(note_hits[0], profile, entities),
-                "source_summary": source_summary,
+                "answer": _repository_dependency_answer(note_hits[0], profile_context, entity_context),
+                "source_summary": _repository_grounded_sources(note_sources, interview_source, include_profile_context),
                 "model": "rule",
                 "answer_style": "repository-dependency-summary",
             }
@@ -339,15 +328,17 @@ def answer_question(
             dependencies = ", ".join(_infer_entity_mentions(entities, normalized_question, limit=5)) or "not yet clear from this interview"
         return {
             "answer": f"Primary dependency signals are: {dependencies}.",
-            "source_summary": source_summary,
+            "source_summary": interview_sources,
             "model": "rule",
             "answer_style": "dependency-summary",
         }
 
     if note_hits and any(term in normalized_question for term in repository_first_terms):
+        include_profile_context = _note_belongs_to_interview_context(note_hits[0], interview)
+        timeline_context = timeline_events if include_profile_context else []
         return {
-            "answer": _repository_incident_answer(note_hits[0], timeline_events),
-            "source_summary": source_summary,
+            "answer": _repository_incident_answer(note_hits[0], timeline_context),
+            "source_summary": _repository_grounded_sources(note_sources, interview_source, include_profile_context),
             "model": "rule",
             "answer_style": "repository-incident-summary",
         }
@@ -365,7 +356,7 @@ def answer_question(
         if generated:
             return {
                 "answer": generated,
-                "source_summary": source_summary,
+                "source_summary": note_sources or interview_sources,
                 "model": "ollama",
                 "answer_style": "llm-powered",
             }
@@ -387,7 +378,7 @@ def answer_question(
             body = "No timeline captured yet."
         return {
             "answer": f"Timeline context: {body}.",
-            "source_summary": source_summary,
+            "source_summary": interview_sources,
             "model": "rule",
             "answer_style": "timeline-summary",
         }
@@ -396,7 +387,7 @@ def answer_question(
         actions = profile.get("recommended_actions", [])
         return {
             "answer": "For a smoother handover: " + "; ".join(actions or ["run one follow-up runbook capture"]),
-            "source_summary": source_summary,
+            "source_summary": interview_sources,
             "model": "rule",
             "answer_style": "handover-guidance",
         }
@@ -411,7 +402,7 @@ def answer_question(
             note_excerpt = ""
         return {
             "answer": f"Relevant nodes: {', '.join(matched_entities)}. {summary} {note_excerpt}".strip(),
-            "source_summary": source_summary,
+            "source_summary": interview_sources,
             "model": "rule",
             "answer_style": "entity-summary",
         }
@@ -419,7 +410,7 @@ def answer_question(
     if answer_bank:
         return {
             "answer": f"Based on the captured interview: {_sentence_preview(answer_bank, 48)}",
-            "source_summary": source_summary,
+            "source_summary": interview_sources,
             "model": "rule",
             "answer_style": "coverage-fallback",
         }
@@ -428,7 +419,7 @@ def answer_question(
         top_note = note_hits[0]
         return {
             "answer": f"No interview field matched this question yet. A relevant repository note says: {_sentence_preview(top_note['content'], 40)}",
-            "source_summary": source_summary,
+            "source_summary": note_sources,
             "model": "rule",
             "answer_style": "repository-fallback",
         }
@@ -853,6 +844,38 @@ def _tokenize(text: str) -> list[str]:
     return [token for token in re.findall(r"[a-z0-9]+", text.lower()) if len(token) > 2]
 
 
+def _repository_note_source(note: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kind": "note",
+        "id": note.get("id", ""),
+        "title": note["title"],
+        "source": note.get("source", ""),
+        "role": note.get("role", ""),
+        "created_at": note.get("created_at", ""),
+        "excerpt": _sentence_preview(note["content"], 42),
+        "content": note["content"],
+    }
+
+
+def _note_belongs_to_interview_context(note: dict[str, Any], interview: dict[str, Any]) -> bool:
+    note_interview_id = note.get("interview_id")
+    if note_interview_id and note_interview_id == interview.get("id"):
+        return True
+    note_role = str(note.get("role") or "").strip().lower()
+    interview_role = str(interview.get("role") or "").strip().lower()
+    return bool(note_role and interview_role and note_role == interview_role)
+
+
+def _repository_grounded_sources(
+    note_sources: list[dict[str, Any]],
+    interview_source: dict[str, Any],
+    include_interview_source: bool,
+) -> list[dict[str, Any]]:
+    if not include_interview_source:
+        return note_sources
+    return [*note_sources, interview_source]
+
+
 def _rank_repository_notes(
     normalized_question: str,
     notes: list[dict[str, Any]],
@@ -883,6 +906,7 @@ def _rank_repository_notes(
 
 def _repository_incident_answer(note: dict[str, Any], timeline_events: list[dict[str, Any]]) -> str:
     content = str(note.get("content", "")).strip()
+    normalized_content = content.lower()
     sentences = [sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+", content) if sentence.strip()]
     focus_terms = {
         "false positive",
@@ -895,6 +919,12 @@ def _repository_incident_answer(note: dict[str, Any], timeline_events: list[dict
         "service account",
         "siem rule",
         "five hours",
+        "cloudfront",
+        "cache",
+        "invalidation",
+        "expired aws role",
+        "failed build",
+        "github actions",
     }
     focused = [
         sentence
@@ -911,12 +941,20 @@ def _repository_incident_answer(note: dict[str, Any], timeline_events: list[dict
             for event in timeline_events[:3]
         ) + "."
 
-    return (
-        "The incident was treated as a false positive because the repository note shows the suspicious "
-        "privilege-escalation pattern came from approved deployment automation, not attacker activity. "
-        + " ".join(focused)
-        + timeline_context
-    ).strip()
+    if "false positive" in normalized_content or "no attacker" in normalized_content:
+        lead = (
+            "The incident was treated as a false positive because the repository note shows the suspicious "
+            "pattern came from approved or expected activity, not attacker activity. "
+        )
+    elif "cloudfront" in normalized_content or "cache" in normalized_content:
+        lead = (
+            "Customers saw outdated dashboard assets because the repository note points to stale CloudFront "
+            "cache behavior rather than a failed build. "
+        )
+    else:
+        lead = "The repository note points to this explanation: "
+
+    return (lead + " ".join(focused) + timeline_context).strip()
 
 
 def _repository_risk_answer(note: dict[str, Any], risk_level: str | None, risk_score: int | None) -> str:

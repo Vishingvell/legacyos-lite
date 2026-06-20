@@ -12,6 +12,7 @@ const state = {
   roles: [],
   selectedRole: null,
   latest: null,
+  profiles: [],
   graph: null,
   timeline: null,
   notes: [],
@@ -59,8 +60,15 @@ async function init() {
   wireNoteInputTracking();
 
   try {
-    state.latest = await api("/api/interviews/latest");
-    await refreshGeneratedViews();
+    await refreshProfiles();
+    if (state.profiles.length) {
+      state.latest = await api(`/api/interviews/${encodeURIComponent(state.profiles[0].id)}`);
+      await refreshGeneratedViews({ refreshProfileDirectory: false });
+    } else {
+      renderEmptyDashboard();
+      renderTimeline();
+      renderGraph();
+    }
   } catch {
     renderEmptyDashboard();
     renderTimeline();
@@ -259,7 +267,8 @@ async function submitInterview() {
       body: JSON.stringify({ role: state.selectedRole, answers })
     });
     clearCurrentDraft();
-    await refreshGeneratedViews();
+    await refreshProfiles();
+    await refreshGeneratedViews({ refreshProfileDirectory: false });
     activateView("dashboard");
   } catch (error) {
     setInterviewError(error.message || "Interview generation failed.");
@@ -343,11 +352,30 @@ async function submitNote(event) {
   }
 }
 
-async function refreshGeneratedViews() {
+async function refreshProfiles() {
+  const payload = await api("/api/interviews?limit=100");
+  state.profiles = Array.isArray(payload.interviews) ? payload.interviews : [];
+  renderProfileDirectory();
+}
+
+async function selectProfile(profileId) {
+  if (!profileId) {
+    return;
+  }
+  state.latest = await api(`/api/interviews/${encodeURIComponent(profileId)}`);
+  await refreshGeneratedViews({ refreshProfileDirectory: false });
+  activateView("dashboard");
+}
+
+async function refreshGeneratedViews(options = {}) {
+  const shouldRefreshProfiles = options.refreshProfileDirectory !== false;
   if (!state.latest) {
     renderEmptyDashboard();
     await refreshNotes();
     return;
+  }
+  if (shouldRefreshProfiles) {
+    await refreshProfiles();
   }
   state.graph = await api(`/api/graph?interview_id=${encodeURIComponent(state.latest.id)}`);
   state.timeline = await api(`/api/timeline?interview_id=${encodeURIComponent(state.latest.id)}`);
@@ -399,6 +427,7 @@ function renderDashboard() {
   const risk = latest.risk_score || 0;
   const riskLevel = (latest.risk_level || "Neutral").toLowerCase();
 
+  renderProfileDirectory();
   document.getElementById("metricRole").textContent = latest.role;
   document.getElementById("metricRisk").textContent = `${risk}/100`;
   document.getElementById("metricNodes").textContent = String(latest.entities.length);
@@ -420,6 +449,37 @@ function renderDashboard() {
   renderChips("topEntities", profile.top_entities || []);
   renderRiskDrivers(profile.risk_breakdown || []);
   renderActions(profile.recommended_actions || []);
+}
+
+function renderProfileDirectory() {
+  const root = document.getElementById("profileDirectoryList");
+  const countNode = document.getElementById("profileDirectoryCount");
+  if (!root || !countNode) {
+    return;
+  }
+  const count = state.profiles.length;
+  countNode.textContent = `${count} ${count === 1 ? "profile" : "profiles"}`;
+  root.innerHTML = "";
+  if (!count) {
+    root.appendChild(emptyState("No profiles captured yet.", "Generate role interviews to build the profile directory."));
+    return;
+  }
+  state.profiles.forEach((profile) => {
+    const card = document.createElement("button");
+    const isActive = state.latest?.id === profile.id;
+    const riskClass = (profile.risk_level || "Neutral").toLowerCase();
+    card.type = "button";
+    card.className = `profileSummaryCard${isActive ? " active" : ""}`;
+    card.innerHTML = `
+      <span class="profileRole">${escapeHtml(profile.role)}</span>
+      <strong>${escapeHtml(profile.risk_score)}/100</strong>
+      <span class="profileMeta">${escapeHtml(profile.coverage || "Starter")} coverage - ${escapeHtml(profile.entity_count || 0)} nodes</span>
+      <p>${escapeHtml(sentencePreview(profile.summary || "No summary captured yet.", 22))}</p>
+      <span class="riskPill ${escapeHtml(riskClass)}">${escapeHtml(profile.risk_level || "Neutral")} risk</span>
+    `;
+    card.addEventListener("click", () => selectProfile(profile.id));
+    root.appendChild(card);
+  });
 }
 
 function clearInterviewError() {
@@ -675,6 +735,7 @@ function updateNoteCharCount() {
 }
 
 function renderEmptyDashboard() {
+  renderProfileDirectory();
   document.getElementById("metricRole").textContent = "Not captured";
   document.getElementById("metricRisk").textContent = "--";
   document.getElementById("metricNodes").textContent = "0";
@@ -903,7 +964,10 @@ function exportGraphToCypher() {
     button.disabled = true;
     button.textContent = "Preparing...";
   }
-  api("/api/graph/export/neo4j")
+  const graphPath = state.latest?.id
+    ? `/api/graph/export/neo4j?interview_id=${encodeURIComponent(state.latest.id)}`
+    : "/api/graph/export/neo4j";
+  api(graphPath)
     .then((payload) => {
       const lines = payload.cypher || "";
       const fileName = `legacyos-graph-${(payload.interview_id || "latest").slice(0, 12)}.cypher`;
@@ -1028,6 +1092,7 @@ function renderSourceDetail(source) {
     .filter(Boolean)
     .join(" - ");
   const content = source.content || source.excerpt || "No source detail was captured.";
+  const preview = source.excerpt || sentencePreview(content, 24);
   const removeAction = source.kind === "note" && source.id
     ? `<button type="button" class="dangerTextButton sourceRemoveButton" data-source-note-remove="${escapeHtml(source.id)}">Remove sensitive note</button>`
     : "";
@@ -1036,6 +1101,7 @@ function renderSourceDetail(source) {
       <summary>
         <span>${escapeHtml(title)}</span>
         <small>${escapeHtml(meta)}</small>
+        <em>${escapeHtml(preview)}</em>
       </summary>
       <p>${escapeHtml(content)}</p>
       ${removeAction}
@@ -1059,6 +1125,14 @@ function emptyState(label, detail = "Run an interview first.") {
 
 function trimLabel(value) {
   return value.length > 18 ? `${value.slice(0, 16)}..` : value;
+}
+
+function sentencePreview(value, limit = 24) {
+  const words = String(value || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length <= limit) {
+    return words.join(" ");
+  }
+  return `${words.slice(0, limit).join(" ")}...`;
 }
 
 function escapeHtml(value) {
