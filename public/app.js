@@ -373,6 +373,26 @@ async function refreshNotes() {
   }
 }
 
+async function removeNote(noteId) {
+  if (!noteId) {
+    return;
+  }
+  const confirmed = window.confirm("Remove this repository note? This cannot be undone in the demo store.");
+  if (!confirmed) {
+    return false;
+  }
+  try {
+    await api(`/api/repository/notes/${encodeURIComponent(noteId)}`, { method: "DELETE" });
+    state.notes = state.notes.filter((note) => note.id !== noteId);
+    renderNotes();
+    setNoteError("Repository note removed.");
+    return true;
+  } catch (error) {
+    setNoteError(error.message || "Could not remove note.");
+    return false;
+  }
+}
+
 function renderDashboard() {
   const latest = state.latest;
   const profile = latest.profile || {};
@@ -616,8 +636,11 @@ function renderNotes() {
     const roleLabel = note.role ? `<span class="noteMetaItem">Role: ${escapeHtml(note.role)}</span>` : "";
     noteCard.innerHTML = `
       <div class="noteHeader">
-        <strong>${escapeHtml(note.title)}</strong>
-        <span class="noteSource">${escapeHtml(note.source)}</span>
+        <div>
+          <strong>${escapeHtml(note.title)}</strong>
+          <span class="noteSource">${escapeHtml(note.source)}</span>
+        </div>
+        <button type="button" class="dangerTextButton" data-note-remove="${escapeHtml(note.id)}">Remove</button>
       </div>
       <p>${escapeHtml(note.content)}</p>
       <div class="noteMeta">
@@ -625,6 +648,10 @@ function renderNotes() {
         ${roleLabel}
       </div>
     `;
+    const removeButton = noteCard.querySelector("[data-note-remove]");
+    if (removeButton) {
+      removeButton.addEventListener("click", () => removeNote(note.id));
+    }
     root.appendChild(noteCard);
   });
 }
@@ -967,9 +994,9 @@ function renderSearchResult(result) {
   const sources = Array.isArray(result.source_summary) ? result.source_summary : [];
   const when = result.created_at ? `<p class="searchModel">Asked: ${escapeHtml(result.created_at)}</p>` : "";
   const sourceHtml = sources.length
-    ? `<div class="searchSources"><strong>Sources:</strong><ul>${sources
-        .map((source) => `<li>${escapeHtml(source.title || "Unknown source")}<span>${escapeHtml(source.excerpt || "")}</span></li>`)
-        .join("")}</ul></div>`
+    ? `<div class="searchSources"><strong>Evidence you can inspect:</strong>${sources
+        .map((source) => renderSourceDetail(source))
+        .join("")}</div>`
     : "";
   const modelLabel = result.model ? `<p class="searchModel">Responder: ${escapeHtml(result.model)}</p>` : "";
   card.innerHTML = `
@@ -979,7 +1006,48 @@ function renderSearchResult(result) {
     <p>${escapeHtml(result.answer)}</p>
     ${sourceHtml}
   `;
+  card.querySelectorAll("[data-source-note-remove]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const removed = await removeNote(button.dataset.sourceNoteRemove);
+      if (removed) {
+        const sourceNode = button.closest(".sourceDetail");
+        if (sourceNode) {
+          sourceNode.remove();
+        }
+        setSearchState("Repository note removed from the demo store.");
+      }
+    });
+  });
   root.prepend(card);
+}
+
+function renderSourceDetail(source) {
+  const title = source.title || "Unknown source";
+  const kind = source.kind === "note" ? "Repository note" : "Interview profile";
+  const meta = [kind, source.source, source.role, formatShortDate(source.created_at)]
+    .filter(Boolean)
+    .join(" - ");
+  const content = source.content || source.excerpt || "No source detail was captured.";
+  const removeAction = source.kind === "note" && source.id
+    ? `<button type="button" class="dangerTextButton sourceRemoveButton" data-source-note-remove="${escapeHtml(source.id)}">Remove sensitive note</button>`
+    : "";
+  return `
+    <details class="sourceDetail">
+      <summary>
+        <span>${escapeHtml(title)}</span>
+        <small>${escapeHtml(meta)}</small>
+      </summary>
+      <p>${escapeHtml(content)}</p>
+      ${removeAction}
+    </details>
+  `;
+}
+
+function formatShortDate(value) {
+  if (!value) {
+    return "";
+  }
+  return String(value).slice(0, 10);
 }
 
 function emptyState(label, detail = "Run an interview first.") {

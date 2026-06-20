@@ -326,5 +326,11 @@ def get_repository_notes(limit: int = 25, interview_id: str | None = None) -> li
     return [dict(row) for row in rows]
 
 
+def delete_repository_note(note_id: str) -> bool:
+    with connect() as conn:
+        result = conn.execute("DELETE FROM repository_notes WHERE id = ?", (note_id,))
+        return result.rowcount > 0
+
+
 def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()

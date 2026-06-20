@@ -263,11 +263,12 @@ def answer_question(
     answer_bank = " ".join(interview.get("answers", {}).values())
     timeline_events = interview.get("timeline", [])
 
-    source_summary: list[dict[str, str]] = [
+    source_summary: list[dict[str, Any]] = [
         {
             "kind": "interview",
             "title": f"{interview.get('role', 'Interview')} profile",
             "excerpt": _sentence_preview(summary, 30),
+            "content": summary,
         }
     ]
 
@@ -283,13 +284,20 @@ def answer_question(
             [
                 {
                     "kind": "note",
+                    "id": note.get("id", ""),
                     "title": note["title"],
+                    "source": note.get("source", ""),
+                    "role": note.get("role", ""),
+                    "created_at": note.get("created_at", ""),
                     "excerpt": _sentence_preview(note["content"], 42),
+                    "content": note["content"],
                 }
                 for note in note_hits[:3]
             ]
         )
 
+    asks_about_risk = any(term in normalized_question for term in ("risk", "score", "exposure"))
+    asks_about_dependency = any(term in normalized_question for term in ("who", "depend", "dependency", "people", "team"))
     repository_first_terms = {
         "incident",
         "false",
@@ -301,6 +309,41 @@ def answer_question(
         "investigation",
         "digging",
     }
+
+    if asks_about_risk:
+        if note_hits:
+            return {
+                "answer": _repository_risk_answer(note_hits[0], risk_level, risk_score),
+                "source_summary": source_summary,
+                "model": "rule",
+                "answer_style": "repository-risk-summary",
+            }
+        drivers = ", ".join(profile.get("risk_drivers", [])[:4]) or "limited documentation signals"
+        return {
+            "answer": f"Current risk is {risk_level} at {risk_score}/100. Main drivers: {drivers}.",
+            "source_summary": source_summary,
+            "model": "rule",
+            "answer_style": "risk-summary",
+        }
+
+    if asks_about_dependency:
+        if note_hits:
+            return {
+                "answer": _repository_dependency_answer(note_hits[0], profile, entities),
+                "source_summary": source_summary,
+                "model": "rule",
+                "answer_style": "repository-dependency-summary",
+            }
+        dependencies = ", ".join(profile.get("critical_dependencies", [])[:5])
+        if not dependencies:
+            dependencies = ", ".join(_infer_entity_mentions(entities, normalized_question, limit=5)) or "not yet clear from this interview"
+        return {
+            "answer": f"Primary dependency signals are: {dependencies}.",
+            "source_summary": source_summary,
+            "model": "rule",
+            "answer_style": "dependency-summary",
+        }
+
     if note_hits and any(term in normalized_question for term in repository_first_terms):
         return {
             "answer": _repository_incident_answer(note_hits[0], timeline_events),
@@ -326,26 +369,6 @@ def answer_question(
                 "model": "ollama",
                 "answer_style": "llm-powered",
             }
-
-    if "risk" in normalized_question or "score" in normalized_question or "exposure" in normalized_question:
-        drivers = ", ".join(profile.get("risk_drivers", [])[:4]) or "limited documentation signals"
-        return {
-            "answer": f"Current risk is {risk_level} at {risk_score}/100. Main drivers: {drivers}.",
-            "source_summary": source_summary,
-            "model": "rule",
-            "answer_style": "risk-summary",
-        }
-
-    if "who" in normalized_question or "depend" in normalized_question:
-        dependencies = ", ".join(profile.get("critical_dependencies", [])[:5])
-        if not dependencies:
-            dependencies = ", ".join(_infer_entity_mentions(entities, normalized_question, limit=5)) or "not yet clear from this interview"
-        return {
-            "answer": f"Primary dependency signals are: {dependencies}.",
-            "source_summary": source_summary,
-            "model": "rule",
-            "answer_style": "dependency-summary",
-        }
 
     if "timeline" in normalized_question or "history" in normalized_question or "incident" in normalized_question:
         if timeline_events:
@@ -894,6 +917,59 @@ def _repository_incident_answer(note: dict[str, Any], timeline_events: list[dict
         + " ".join(focused)
         + timeline_context
     ).strip()
+
+
+def _repository_risk_answer(note: dict[str, Any], risk_level: str | None, risk_score: int | None) -> str:
+    content = str(note.get("content", "")).lower()
+    risks = []
+    if "five" in content and "hour" in content:
+        risks.append("the investigation path was slow enough to create a repeat-response risk")
+    if "ci/cd" in content or "pipeline" in content or "deployment" in content:
+        risks.append("CI/CD alert ownership and expected automation behavior need clearer documentation")
+    if "service account" in content or "privilege" in content or "permission" in content:
+        risks.append("service-account and permission-change context is easy to misread during an incident")
+    if "siem" in content or "rule" in content or "alert" in content:
+        risks.append("SIEM rule tuning and false-positive criteria are not yet captured as a reusable playbook")
+    if "developer" in content or "application" in content or "code" in content:
+        risks.append("application-code context still depends on the developer who knew the change history")
+    if not risks:
+        risks.append(_sentence_preview(str(note.get("content", "")), 28))
+
+    risk_context = ""
+    if risk_level is not None and risk_score is not None:
+        risk_context = f" Current profile risk remains {risk_level} at {risk_score}/100."
+    return "Highest continuity risks from this evidence: " + "; ".join(risks[:4]) + "." + risk_context
+
+
+def _repository_dependency_answer(
+    note: dict[str, Any],
+    profile: dict[str, Any],
+    entities: list[dict[str, Any]],
+) -> str:
+    content = str(note.get("content", "")).lower()
+    dependencies = []
+    dependency_terms = {
+        "SOC Analyst": ("soc analyst", "soc"),
+        "Security Engineer": ("security engineer", "siem", "alert"),
+        "Software Developer": ("developer", "application", "code"),
+        "CI/CD or Release Owner": ("ci/cd", "pipeline", "deployment", "release"),
+        "IAM or Platform Owner": ("iam", "service account", "permission", "privilege"),
+    }
+    for label, terms in dependency_terms.items():
+        if any(term in content for term in terms):
+            dependencies.append(label)
+    for dependency in profile.get("critical_dependencies", [])[:3]:
+        if dependency not in dependencies:
+            dependencies.append(dependency)
+    if not dependencies:
+        dependencies = _infer_entity_mentions(entities, content, limit=5)
+    if not dependencies:
+        dependencies = ["not yet clear from the captured evidence"]
+    return (
+        "Key dependencies from this evidence are: "
+        + ", ".join(dependencies[:6])
+        + ". Open the source note below to inspect the exact meeting or handover context behind that answer."
+    )
 
 
 def _find_relevant_timeline_events(

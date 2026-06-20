@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from legacyos_lite.ai import ROLE_QUESTIONS, answer_question, generate_interview_package
 from legacyos_lite.db import (
+    delete_repository_note,
     get_interview,
     get_latest_interview,
     get_repository_notes,
@@ -97,7 +98,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
@@ -393,6 +394,14 @@ def create_repository_note(payload: RepositoryNoteRequest) -> dict[str, Any]:
         interview_id=interview_id,
         content=content,
     )
+
+
+@app.delete("/api/repository/notes/{note_id}")
+def remove_repository_note(note_id: str) -> dict[str, str]:
+    removed = delete_repository_note(note_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Repository note not found.")
+    return {"status": "removed", "id": note_id}
 
 
 def _load_interview_or_latest(interview_id: str | None) -> dict[str, Any]:

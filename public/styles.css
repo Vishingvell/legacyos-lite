@@ -562,12 +562,15 @@ h2 {
 }
 
 .noteHeader {
-  display: grid;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
   gap: 2px;
   margin-bottom: 8px;
 }
 
 .noteHeader strong {
+  display: block;
   font-size: 1rem;
 }
 
@@ -591,6 +594,25 @@ h2 {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.dangerTextButton {
+  border: 1px solid var(--rose-soft);
+  border-radius: 8px;
+  background: #fff7f8;
+  color: var(--rose);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 7px 10px;
+  width: auto;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dangerTextButton:hover,
+.dangerTextButton:focus-visible {
+  border-color: var(--rose);
+  outline: none;
 }
 
 textarea,
@@ -801,28 +823,45 @@ input {
 
 .searchSources {
   margin-top: 12px;
+  display: grid;
+  gap: 8px;
 }
 
 .searchSources strong {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
-.searchSources ul {
-  margin: 0;
-  padding-left: 18px;
+.sourceDetail {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfb;
+  padding: 10px 12px;
+}
+
+.sourceDetail summary {
+  display: grid;
+  gap: 2px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sourceDetail summary span {
+  font-weight: 800;
+}
+
+.sourceDetail summary small {
   color: var(--muted);
-}
-
-.searchSources li {
-  margin-bottom: 6px;
-  line-height: 1.35;
-}
-
-.searchSources li span {
-  display: block;
   font-size: 0.83rem;
-  color: #52605a;
+}
+
+.sourceDetail p {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+}
+
+.sourceRemoveButton {
+  margin-top: 10px;
 }
 
 .emptyState {
