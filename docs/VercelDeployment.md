@@ -7,6 +7,7 @@ core ownership protections intact.
 
 - Single-domain app hosted by Vercel.
 - LegacyOS Lite FastAPI API served through a Vercel Python function.
+- Static frontend served from `public/`.
 - SQLite data stored in Vercel runtime temp storage (suitable for demo sessions).
 
 Note:
@@ -33,17 +34,18 @@ In Vercel:
 
 1. Create/import a new project from your private GitHub repository.
 2. Framework detection: `Other`.
-3. No custom build step required.
-4. Ensure `vercel.json` is used as-is.
-5. Set environment variable:
-   - `LEGACYOSLITE_ALLOWED_ORIGINS` = `https://<your-vercel-domain>`
-   (Optional during first validation; `VERCEL_URL` is detected automatically as fallback.)
+3. Root Directory: `.`.
+4. Install Command: `pip install -r requirements.txt`.
+5. Build Command: leave empty.
+6. Output Directory: leave empty.
+7. Ensure `vercel.json` is used as-is.
+8. Set environment variable:
+   - `LEGACYOSLITE_DB_PATH` = `/tmp/legacyoslite.db`
 
-If Vercel asks for install/build fields:
+Optional environment variable:
 
-- Install Command: `pip install -r requirements.txt`
-- Build Command: leave empty
-- Output Directory: leave empty
+- `LEGACYOSLITE_ALLOWED_ORIGINS` = `https://<your-vercel-domain>`
+  (Usually not required for same-origin app usage. `VERCEL_URL` is detected automatically.)
 
 ## 3) Recommended deployment guardrails
 
@@ -62,3 +64,5 @@ If Vercel asks for install/build fields:
 
 The FastAPI backend no longer mounts `public/` through `StaticFiles`.
 Vercel serves frontend assets from `public/`, while Python only handles `/api/*`.
+The `vercel.json` file intentionally avoids a `builds` block so project settings
+and automatic Python function handling remain predictable.

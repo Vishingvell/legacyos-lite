@@ -1,15 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
   "functions": {
     "api/index.py": {
       "includeFiles": "backend/**"
@@ -21,12 +11,11 @@
       "dest": "/api/index.py"
     },
     {
-      "src": "/(app\\.js|styles\\.css|favicon\\.(?:ico|png|svg))",
-      "dest": "/public/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/public/index.html"
+      "dest": "/index.html"
     }
   ]
 }

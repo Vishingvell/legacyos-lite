@@ -12,6 +12,7 @@ from pathlib import Path
 import os
 from typing import Any
 
+from fastapi import Request
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -60,6 +61,7 @@ MAX_NOTE_CHARS = 12000
 
 
 app = FastAPI(title="LegacyOS Lite", version="0.1.0")
+_database_ready = False
 
 def _allowed_origins() -> list[str]:
     env_origins = os.getenv("LEGACYOSLITE_ALLOWED_ORIGINS", "").strip()
@@ -84,6 +86,13 @@ def _allowed_origins() -> list[str]:
     return deduped
 
 
+def _ensure_database_ready() -> None:
+    global _database_ready
+    if not _database_ready:
+        initialize_database()
+        _database_ready = True
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
@@ -93,9 +102,16 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def ensure_database_for_api(request: Request, call_next):
+    if request.url.path.startswith("/api/"):
+        _ensure_database_ready()
+    return await call_next(request)
+
+
 @app.on_event("startup")
 def startup() -> None:
-    initialize_database()
+    _ensure_database_ready()
 
 
 @app.get("/")
@@ -111,6 +127,11 @@ def styles() -> FileResponse:
 @app.get("/app.js")
 def app_script() -> FileResponse:
     return FileResponse(PUBLIC_ROOT / "app.js")
+
+
+@app.get("/favicon.svg")
+def favicon() -> FileResponse:
+    return FileResponse(PUBLIC_ROOT / "favicon.svg")
 
 
 @app.get("/api/health")

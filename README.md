@@ -55,8 +55,8 @@ Deployment options:
 
 - Vercel private preview (private GitHub repo + Vercel):
 
-  1. Push `LEGACYOSLITE` to a private GitHub repository.
-  2. Import it into Vercel.
+  1. Import `https://github.com/Vishingvell/legacyos-lite` into a new Vercel project.
+  2. Deploy from the latest `main` commit.
   3. Use `docs/VercelDeployment.md` for setup steps.
 
 The Vercel setup is suitable for hackathon demo exposure, but data persistence is
