@@ -203,6 +203,21 @@ def get_latest_interview() -> dict[str, Any] | None:
     return get_interview(row["id"]) if row else None
 
 
+def get_latest_interview_by_role(role: str) -> dict[str, Any] | None:
+    with connect() as conn:
+        row = conn.execute(
+            """
+            SELECT id
+            FROM interviews
+            WHERE lower(role) = lower(?)
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (role,),
+        ).fetchone()
+    return get_interview(row["id"]) if row else None
+
+
 def list_interview_summaries(limit: int = 50) -> list[dict[str, Any]]:
     with connect() as conn:
         rows = conn.execute(

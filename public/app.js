@@ -321,8 +321,12 @@ async function submitNote(event) {
     content,
     attach_latest: attachLatest
   };
-  if (canonicalRole) {
-    payload.role = canonicalRole;
+  const effectiveRole = canonicalRole || state.latest?.role || null;
+  if (effectiveRole) {
+    payload.role = effectiveRole;
+  }
+  if (attachLatest && state.latest?.id) {
+    payload.interview_id = state.latest.id;
   }
 
   try {
@@ -358,13 +362,23 @@ async function refreshProfiles() {
   renderProfileDirectory();
 }
 
-async function selectProfile(profileId) {
+async function selectProfile(profileId, roleName = "") {
   if (!profileId) {
     return;
   }
-  state.latest = await api(`/api/interviews/${encodeURIComponent(profileId)}`);
-  await refreshGeneratedViews({ refreshProfileDirectory: false });
-  activateView("dashboard");
+  try {
+    state.latest = await api(`/api/interviews/${encodeURIComponent(profileId)}`);
+    await refreshGeneratedViews({ refreshProfileDirectory: false });
+    activateView("dashboard");
+  } catch (error) {
+    await refreshProfiles();
+    const fallbackPath = roleName
+      ? `/api/interviews/latest?role=${encodeURIComponent(roleName)}`
+      : "/api/interviews/latest";
+    state.latest = await api(fallbackPath);
+    await refreshGeneratedViews({ refreshProfileDirectory: false });
+    activateView("dashboard");
+  }
 }
 
 async function refreshGeneratedViews(options = {}) {
@@ -377,8 +391,8 @@ async function refreshGeneratedViews(options = {}) {
   if (shouldRefreshProfiles) {
     await refreshProfiles();
   }
-  state.graph = await api(`/api/graph?interview_id=${encodeURIComponent(state.latest.id)}`);
-  state.timeline = await api(`/api/timeline?interview_id=${encodeURIComponent(state.latest.id)}`);
+  state.graph = await api(profileScopedPath("/api/graph"));
+  state.timeline = await api(profileScopedPath("/api/timeline"));
   renderDashboard();
   renderTimeline();
   renderGraph();
@@ -477,7 +491,7 @@ function renderProfileDirectory() {
       <p>${escapeHtml(sentencePreview(profile.summary || "No summary captured yet.", 22))}</p>
       <span class="riskPill ${escapeHtml(riskClass)}">${escapeHtml(profile.risk_level || "Neutral")} risk</span>
     `;
-    card.addEventListener("click", () => selectProfile(profile.id));
+    card.addEventListener("click", () => selectProfile(profile.id, profile.role));
     root.appendChild(card);
   });
 }
@@ -964,10 +978,7 @@ function exportGraphToCypher() {
     button.disabled = true;
     button.textContent = "Preparing...";
   }
-  const graphPath = state.latest?.id
-    ? `/api/graph/export/neo4j?interview_id=${encodeURIComponent(state.latest.id)}`
-    : "/api/graph/export/neo4j";
-  api(graphPath)
+  api(profileScopedPath("/api/graph/export/neo4j"))
     .then((payload) => {
       const lines = payload.cypher || "";
       const fileName = `legacyos-graph-${(payload.interview_id || "latest").slice(0, 12)}.cypher`;
@@ -1026,6 +1037,9 @@ async function submitSearch(event) {
   if (state.latest?.id) {
     payload.interview_id = state.latest.id;
   }
+  if (state.latest?.role) {
+    payload.role = state.latest.role;
+  }
   try {
     const result = await api("/api/search", {
       method: "POST",
@@ -1040,6 +1054,18 @@ async function submitSearch(event) {
     searchButton.disabled = false;
     searchButton.textContent = "Ask";
   }
+}
+
+function profileScopedPath(basePath) {
+  const params = new URLSearchParams();
+  if (state.latest?.id) {
+    params.set("interview_id", state.latest.id);
+  }
+  if (state.latest?.role) {
+    params.set("role", state.latest.role);
+  }
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
 }
 
 function setSearchState(message) {

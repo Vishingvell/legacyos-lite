@@ -23,6 +23,7 @@ from legacyos_lite.db import (
     delete_repository_note,
     get_interview,
     get_latest_interview,
+    get_latest_interview_by_role,
     get_relevant_repository_notes,
     get_repository_notes,
     initialize_database,
@@ -45,6 +46,7 @@ class InterviewRequest(BaseModel):
 class SearchRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
     interview_id: str | None = None
+    role: str | None = None
     include_repository_notes: bool = True
 
 
@@ -204,8 +206,9 @@ def create_interview(payload: InterviewRequest) -> dict[str, Any]:
 
 
 @app.get("/api/interviews/latest")
-def latest_interview() -> dict[str, Any]:
-    latest = get_latest_interview()
+def latest_interview(role: str | None = None) -> dict[str, Any]:
+    role_name = _normalize_role(role)
+    latest = get_latest_interview_by_role(role_name) if role_name else get_latest_interview()
     if latest is None:
         raise HTTPException(status_code=404, detail="No interview found.")
     return latest
@@ -229,14 +232,16 @@ def read_interview(interview_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/graph")
-def graph(interview_id: str | None = None) -> dict[str, Any]:
-    interview = _load_interview_or_latest(interview_id)
+def graph(interview_id: str | None = None, role: str | None = None) -> dict[str, Any]:
+    role_name = _normalize_role(role)
+    interview = _load_interview_or_latest(interview_id, role_name, allow_stale_fallback=True)
     return _build_graph_payload(interview)
 
 
 @app.get("/api/graph/export/neo4j")
-def export_graph_neo4j(interview_id: str | None = None) -> dict[str, Any]:
-    interview = _load_interview_or_latest(interview_id)
+def export_graph_neo4j(interview_id: str | None = None, role: str | None = None) -> dict[str, Any]:
+    role_name = _normalize_role(role)
+    interview = _load_interview_or_latest(interview_id, role_name, allow_stale_fallback=True)
     payload = _build_graph_payload(interview)
     return {
         "interview_id": interview["id"],
@@ -331,14 +336,16 @@ def _build_neo4j_cypher(nodes: list[dict[str, Any]], links: list[dict[str, Any]]
 
 
 @app.get("/api/timeline")
-def timeline(interview_id: str | None = None) -> dict[str, Any]:
-    interview = _load_interview_or_latest(interview_id)
+def timeline(interview_id: str | None = None, role: str | None = None) -> dict[str, Any]:
+    role_name = _normalize_role(role)
+    interview = _load_interview_or_latest(interview_id, role_name, allow_stale_fallback=True)
     return {"interview_id": interview["id"], "events": interview["timeline"]}
 
 
 @app.post("/api/search")
 def search(payload: SearchRequest) -> dict[str, Any]:
-    interview = _load_interview_or_latest(payload.interview_id)
+    role_name = _normalize_role(payload.role)
+    interview = _load_interview_or_latest(payload.interview_id, role_name, allow_stale_fallback=True)
     notes = []
     if payload.include_repository_notes:
         notes = get_relevant_repository_notes(
@@ -372,15 +379,15 @@ def list_notes(interview_id: str | None = None, limit: int = 25) -> dict[str, An
 @app.post("/api/repository/notes")
 def create_repository_note(payload: RepositoryNoteRequest) -> dict[str, Any]:
     interview_id = payload.interview_id
-    if payload.attach_latest:
-        latest = get_latest_interview()
-        if latest is None:
-            raise HTTPException(status_code=400, detail="No interview found to attach notes to.")
-        interview_id = latest["id"]
-
     role_name = _normalize_role(payload.role)
     if payload.role is not None and role_name is None:
         raise HTTPException(status_code=400, detail="Role is not supported by current role set.")
+
+    if payload.attach_latest and not interview_id:
+        latest = get_latest_interview_by_role(role_name) if role_name else get_latest_interview()
+        if latest is None:
+            raise HTTPException(status_code=400, detail="No interview found to attach notes to.")
+        interview_id = latest["id"]
 
     title = payload.title.strip()
     source = payload.source.strip()
@@ -398,7 +405,14 @@ def create_repository_note(payload: RepositoryNoteRequest) -> dict[str, Any]:
         try:
             get_interview(interview_id)
         except LookupError as exc:
-            raise HTTPException(status_code=400, detail="Interview not found for attachment.") from exc
+            if role_name:
+                role_latest = get_latest_interview_by_role(role_name)
+                if role_latest is not None:
+                    interview_id = role_latest["id"]
+                else:
+                    raise HTTPException(status_code=400, detail="Interview not found for attachment.") from exc
+            else:
+                raise HTTPException(status_code=400, detail="Interview not found for attachment.") from exc
 
     return save_repository_note(
         title=title,
@@ -417,10 +431,24 @@ def remove_repository_note(note_id: str) -> dict[str, str]:
     return {"status": "removed", "id": note_id}
 
 
-def _load_interview_or_latest(interview_id: str | None) -> dict[str, Any]:
+def _load_interview_or_latest(
+    interview_id: str | None,
+    role: str | None = None,
+    *,
+    allow_stale_fallback: bool = False,
+) -> dict[str, Any]:
     try:
         if interview_id:
             return get_interview(interview_id)
+    except LookupError:
+        if not allow_stale_fallback:
+            raise HTTPException(status_code=404, detail="Interview not found.")
+
+    try:
+        if role:
+            role_latest = get_latest_interview_by_role(role)
+            if role_latest is not None:
+                return role_latest
         latest = get_latest_interview()
         if latest is not None:
             return latest
