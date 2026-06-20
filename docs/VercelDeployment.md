@@ -57,3 +57,8 @@ If Vercel asks for install/build fields:
 - Open the Vercel URL.
 - Run through Day 7 flow (interview, graph, timeline, repository note, search).
 - Confirm `api` endpoints respond.
+
+## 5) Current Vercel hardening note
+
+The FastAPI backend no longer mounts `public/` through `StaticFiles`.
+Vercel serves frontend assets from `public/`, while Python only handles `/api/*`.
