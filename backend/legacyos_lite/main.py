@@ -15,7 +15,6 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from legacyos_lite.ai import ROLE_QUESTIONS, answer_question, generate_interview_package
@@ -97,10 +96,6 @@ app.add_middleware(
 @app.on_event("startup")
 def startup() -> None:
     initialize_database()
-
-
-if PUBLIC_ROOT.exists():
-    app.mount("/static", StaticFiles(directory=PUBLIC_ROOT), name="static")
 
 
 @app.get("/")
