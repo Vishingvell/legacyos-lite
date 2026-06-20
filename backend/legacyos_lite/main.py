@@ -99,7 +99,8 @@ def startup() -> None:
     initialize_database()
 
 
-app.mount("/static", StaticFiles(directory=PUBLIC_ROOT), name="static")
+if PUBLIC_ROOT.exists():
+    app.mount("/static", StaticFiles(directory=PUBLIC_ROOT), name="static")
 
 
 @app.get("/")
