@@ -41,20 +41,12 @@ SQLite database
 - `timeline_events`: generated sequence of knowledge events and operational moments.
 - `search_queries`: saved demo search questions and generated answers.
 
-## AI Strategy
+## AI Approach
 
-Day 1 uses deterministic local AI-style processing so the demo can run without network access or a model server.
+LegacyOS Lite uses deterministic local AI-style processing so the demo can run without network access or a model server.
+An optional Ollama adapter is available, but the demo remains usable without external AI services.
 
-Future sprint upgrade:
-
-- Add an Ollama adapter behind the same processing interface.
-- Keep deterministic fallback for demos.
-
-## Graph Strategy
+## Graph Approach
 
 The demo renders a Neo4j-style graph in the browser from persisted nodes and relationships.
-
-Future sprint upgrade:
-
-- Add optional Neo4j write/export support.
-- Keep SQLite as the fallback demo store.
+Neo4j export is available as downloadable Cypher while SQLite remains the default demo store.

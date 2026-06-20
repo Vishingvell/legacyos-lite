@@ -55,7 +55,7 @@ Optional environment variable:
 - Keep repository ownership notices in place.
 - Do not commit `.env` or secrets.
 - Share only demo-safe sample data publicly.
-- For stronger persistence, replace `LEGACYOSLITE_DB_PATH` with an external DB during future hardening.
+- For stronger persistence during review, replace `LEGACYOSLITE_DB_PATH` with an external database.
 
 ## 4) Quick verification after deploy
 

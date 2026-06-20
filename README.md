@@ -35,6 +35,8 @@ You should see:
 
 Demo script details and presenter flow are in `docs/DemoScript.md`.
 
+Sanitized build interaction logs for hackathon review are in `docs/interaction-logs/`.
+
 ## Local Run
 
 From this folder:
