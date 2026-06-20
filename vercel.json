@@ -21,7 +21,7 @@
       "dest": "/api/index.py"
     },
     {
-      "src": "/(app\\.js|styles\\.css|favicon\\.(?:ico|png))",
+      "src": "/(app\\.js|styles\\.css|favicon\\.(?:ico|png|svg))",
       "dest": "/public/$1"
     },
     {
