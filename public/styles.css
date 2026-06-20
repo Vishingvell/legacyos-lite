@@ -1,0 +1,939 @@
+/*
+ * Copyright (c) 2026 Vishalan Karunanithi
+ *
+ * All Rights Reserved.
+ *
+ * Unauthorized copying, modification,
+ * distribution, or commercial use
+ * is prohibited.
+ */
+
+:root {
+  --bg: #f4f7f5;
+  --panel: #ffffff;
+  --panel-strong: #edf3ef;
+  --ink: #17211b;
+  --muted: #617064;
+  --line: #dbe5dd;
+  --green: #0e7c66;
+  --green-soft: #dff3ed;
+  --blue: #2878c7;
+  --blue-soft: #dcecff;
+  --amber: #d58a17;
+  --amber-soft: #fff0d8;
+  --rose: #c84f5d;
+  --rose-soft: #ffe0e4;
+  --shadow: 0 18px 45px rgba(23, 33, 27, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.appShell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px;
+  background: #17211b;
+  color: #f8fbf9;
+}
+
+.brandBlock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandMark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--green);
+  color: white;
+  font-weight: 800;
+}
+
+.brandBlock p,
+.brandBlock strong {
+  display: block;
+  margin: 0;
+}
+
+.brandBlock p {
+  color: #b8c7bd;
+  font-size: 0.82rem;
+}
+
+.brandBlock strong {
+  font-size: 1.22rem;
+}
+
+.navStack {
+  display: grid;
+  gap: 8px;
+}
+
+.navButton {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: transparent;
+  color: #dce8e1;
+  text-align: left;
+}
+
+.navButton:hover,
+.navButton.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.sprintBadge {
+  margin-top: auto;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+}
+
+.sprintBadge span {
+  color: #b8c7bd;
+  font-size: 0.8rem;
+}
+
+.mainArea {
+  min-width: 0;
+  padding: 28px;
+}
+
+.topbar,
+.sectionHeader,
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.interviewStatus {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.interviewMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.neutralText {
+  color: #6f7c75;
+}
+
+.warningText {
+  color: var(--rose);
+}
+
+.successText {
+  color: var(--green);
+}
+
+.progressTrack {
+  width: 100%;
+  height: 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  background: white;
+}
+
+.progressTrack #progressFill {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0e7c66, #2f855a);
+  transition: width 180ms ease;
+}
+
+.formError {
+  color: var(--rose);
+  border: 1px solid #ffccd3;
+  background: var(--rose-soft);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  min-height: 20px;
+}
+
+.formError[hidden] {
+  display: none;
+}
+
+.interviewActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.topbar {
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: var(--green);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: 2.1rem;
+  line-height: 1.05;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.35rem;
+}
+
+.runStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--muted);
+}
+
+.runStatusGroup {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  text-align: right;
+}
+
+.modeHint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.statusBadge {
+  display: inline-flex;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.metricCard,
+.panel,
+.roleCard,
+.questionCard,
+.answerCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.metricCard {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.metricCard span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.metricCard strong {
+  font-size: 1.5rem;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.widePanel {
+  grid-column: 1 / -1;
+}
+
+.summaryText {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.riskPill {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.riskPill.neutral {
+  background: var(--panel-strong);
+  color: var(--muted);
+}
+
+.riskPill.low {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.riskPill.medium {
+  background: var(--amber-soft);
+  color: #925c00;
+}
+
+.riskPill.high {
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+
+.riskMeter {
+  margin-top: 10px;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-strong);
+}
+
+.meterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.meterHeader strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.riskMeter span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+  transition: width 220ms ease;
+}
+
+.chipWrap,
+.actionList,
+.riskDrivers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.riskDrivers {
+  align-items: flex-start;
+  margin-bottom: 2px;
+}
+
+.riskDriver {
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #f4f9f7;
+  color: #1d4f42;
+  border: 1px solid var(--line);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+}
+
+.riskDriver::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rose);
+  margin-right: 6px;
+}
+
+.chip,
+.actionItem {
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: var(--panel-strong);
+  color: #314038;
+  font-size: 0.88rem;
+}
+
+.actionItem {
+  border-radius: 8px;
+}
+
+.roleGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.roleCard {
+  display: grid;
+  gap: 8px;
+  min-height: 116px;
+  padding: 16px;
+  text-align: left;
+}
+
+.roleCard.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
+.roleCard strong {
+  font-size: 1.05rem;
+}
+
+.roleCard span {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.questionStack {
+  display: grid;
+  gap: 12px;
+}
+
+.questionCard {
+  display: grid;
+  gap: 9px;
+  padding: 16px;
+}
+
+.questionCard label {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  font-weight: 700;
+}
+
+.questionCard label .questionNumber {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.questionCard.needsInput textarea {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px rgba(200, 79, 93, 0.08);
+}
+
+.questionCard.ready textarea {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(14, 124, 102, 0.08);
+}
+
+.inputMeta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.questionCard.ready .inputMeta {
+  color: var(--green);
+}
+
+.questionCard.needsInput .inputMeta {
+  color: var(--rose);
+}
+
+.noteForm {
+  display: grid;
+  gap: 10px;
+  max-width: 860px;
+  margin-top: 14px;
+}
+
+.noteForm label,
+.noteList {
+  margin-top: 10px;
+}
+
+.noteCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.noteCheckbox input {
+  width: 18px;
+  height: 18px;
+}
+
+.noteMeta {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+#noteContentInput {
+  min-height: 140px;
+}
+
+.noteList {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.noteCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.noteHeader {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.noteHeader strong {
+  font-size: 1rem;
+}
+
+.noteSource {
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.noteMetaItem {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 0.77rem;
+}
+
+.noteCard p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+textarea,
+input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+}
+
+textarea {
+  min-height: 94px;
+  padding: 12px;
+  resize: vertical;
+}
+
+input {
+  height: 46px;
+  padding: 0 13px;
+}
+
+.primaryButton {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 15px;
+  background: var(--green);
+  color: white;
+  font-weight: 800;
+}
+
+.primaryButton:hover {
+  background: #096a56;
+}
+
+.primaryButton:disabled {
+  background: #9ca79f;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 15px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.secondaryButton:hover {
+  background: #f6fbf8;
+}
+
+.timelineList {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.timelineEvent {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.timelineEvent time {
+  color: var(--green);
+  font-weight: 800;
+}
+
+.timelineEvent p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.graphFrame {
+  min-height: 590px;
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.graphLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.79rem;
+}
+
+.legendDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.roleDot {
+  background: #0e7c66;
+}
+
+.systemDot {
+  background: #2878c7;
+}
+
+.personDot {
+  background: #2f855a;
+}
+
+.processDot {
+  background: #d58a17;
+}
+
+.sourceDot {
+  background: #6d6bb3;
+}
+
+.riskDot {
+  background: #c84f5d;
+}
+
+#graphSvg {
+  display: block;
+  width: 100%;
+  height: 590px;
+}
+
+.graphExportStatus {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid #9ed5c0;
+  border-radius: 8px;
+  background: #f4fbf7;
+  color: #145646;
+  font-size: 0.86rem;
+}
+
+.graphEdgeLabel {
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 3.6px;
+  stroke-linecap: round;
+  paint-order: stroke fill;
+}
+
+.searchBar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.searchState {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.searchState strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.searchResults {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.searchResults .answerCard {
+  border-left: 4px solid var(--green);
+  padding-left: 14px;
+}
+
+.answerCard {
+  padding: 16px;
+}
+
+.answerCard strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.answerCard p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.searchModel {
+  margin: 0 0 4px;
+  color: var(--green);
+  font-size: 0.82rem;
+}
+
+.searchSources {
+  margin-top: 12px;
+}
+
+.searchSources strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.searchSources ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.searchSources li {
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.searchSources li span {
+  display: block;
+  font-size: 0.83rem;
+  color: #52605a;
+}
+
+.emptyState {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.emptyState strong {
+  color: var(--ink);
+}
+
+.sprintBadge {
+  gap: 6px;
+}
+
+.sprintBadge strong {
+  letter-spacing: 0;
+}
+
+.formError[hidden],
+.graphExportStatus[hidden],
+.searchState[hidden] {
+  display: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(14, 124, 102, 0.35);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1260px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .appShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
+  .navStack {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .navButton {
+    white-space: nowrap;
+  }
+
+  .metricGrid,
+  .roleGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .mainArea {
+    padding: 18px;
+  }
+
+  .topbar,
+  .sectionHeader,
+  .panelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metricGrid,
+  .roleGrid,
+  .searchBar {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .timelineEvent {
+    grid-template-columns: 1fr;
+  }
+}

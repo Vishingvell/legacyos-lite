@@ -1,0 +1,250 @@
+<!--
+  Copyright (c) 2026 Vishalan Karunanithi
+
+  All Rights Reserved.
+
+  Unauthorized copying, modification,
+  distribution, or commercial use
+  is prohibited.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LegacyOS Lite</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="appShell">
+      <aside class="sidebar">
+        <div class="brandBlock">
+          <span class="brandMark">L</span>
+          <div>
+            <p>LegacyOS</p>
+            <strong>Lite</strong>
+          </div>
+        </div>
+
+        <nav class="navStack" aria-label="Primary">
+          <button class="navButton active" data-view="dashboard">Dashboard</button>
+          <button class="navButton" data-view="interview">Interview</button>
+          <button class="navButton" data-view="repository">Knowledge Repository</button>
+          <button class="navButton" data-view="timeline">Timeline</button>
+          <button class="navButton" data-view="graph">Graph</button>
+          <button class="navButton" data-view="search">Search</button>
+        </nav>
+
+        <div class="sprintBadge">
+          <span>Hackathon Sprint</span>
+          <strong>Day 6</strong>
+        </div>
+      </aside>
+
+      <section class="mainArea">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Knowledge continuity demo</p>
+            <h1>LegacyOS Lite</h1>
+            <p class="modeHint">Local FastAPI demo with SQLite and static dashboard</p>
+          </div>
+          <div class="runStatusGroup">
+            <div class="runStatus">
+              <span class="pulse"></span>
+              Local demo
+            </div>
+            <span class="statusBadge">Single-machine deployment for hackathon prep</span>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboardView">
+          <div class="metricGrid">
+            <article class="metricCard">
+              <span>Current Role</span>
+              <strong id="metricRole">Not captured</strong>
+            </article>
+            <article class="metricCard">
+              <span>Risk Score</span>
+              <strong id="metricRisk">--</strong>
+            </article>
+            <article class="metricCard">
+              <span>Graph Nodes</span>
+              <strong id="metricNodes">0</strong>
+            </article>
+            <article class="metricCard">
+              <span>Coverage</span>
+              <strong id="metricCoverage">Starter</strong>
+            </article>
+          </div>
+
+          <div class="dashboardGrid">
+            <article class="panel summaryPanel">
+              <div class="panelHeader">
+                <div>
+                  <p class="eyebrow">Generated summary</p>
+                  <h2>Knowledge Profile</h2>
+                </div>
+                <span id="riskPill" class="riskPill neutral">No risk yet</span>
+              </div>
+              <p id="summaryText" class="summaryText">
+                Complete an interview to generate a knowledge profile.
+              </p>
+              <div class="meterHeader">
+                <span>Knowledge risk score</span>
+                <strong id="riskValue">--/100</strong>
+              </div>
+              <div class="riskMeter">
+                <span id="riskFill"></span>
+              </div>
+              <div id="riskDrivers" class="riskDrivers"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panelHeader">
+                <div>
+                  <p class="eyebrow">AI extraction</p>
+                  <h2>Top Knowledge Nodes</h2>
+                </div>
+              </div>
+              <div id="topEntities" class="chipWrap"></div>
+            </article>
+
+            <article class="panel widePanel">
+              <div class="panelHeader">
+                <div>
+                  <p class="eyebrow">Next actions</p>
+                  <h2>Continuity Moves</h2>
+                </div>
+              </div>
+              <div id="actionList" class="actionList"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="interviewView">
+          <div class="sectionHeader">
+            <div>
+              <p class="eyebrow">Step 1 and 2</p>
+              <h2>AI Interview Engine</h2>
+            </div>
+          </div>
+          <div class="interviewStatus">
+            <div class="interviewMeta">
+              <span id="progressText">Complete all role questions</span>
+              <span id="progressStatus" class="neutralText">Ready</span>
+            </div>
+            <div class="progressTrack">
+              <span id="progressFill"></span>
+            </div>
+            <div id="interviewValidation" class="formError" hidden role="status"></div>
+            <div class="interviewActions">
+              <button type="button" class="secondaryButton" id="clearDraftButton">Clear Draft</button>
+              <button class="primaryButton" id="runInterviewButton">Generate Profile</button>
+            </div>
+          </div>
+
+          <div id="roleCards" class="roleGrid"></div>
+          <form id="interviewForm" class="questionStack"></form>
+        </section>
+
+        <section class="view" id="repositoryView">
+          <div class="sectionHeader">
+            <div>
+              <p class="eyebrow">Step 0</p>
+              <h2>Knowledge Repository</h2>
+              <p class="noteMeta">This is the intake path for meeting notes, audit notes, handoff notes, and other operational documentation.</p>
+            </div>
+            <button type="button" class="secondaryButton" id="reloadNotesButton">Refresh Notes</button>
+          </div>
+
+          <form id="noteForm" class="noteForm">
+            <label for="noteTitleInput">Note title</label>
+            <input id="noteTitleInput" maxlength="180" placeholder="Quarterly SOC audit findings" />
+            <label for="noteSourceInput">Source</label>
+            <input id="noteSourceInput" maxlength="120" placeholder="Audit board, handover notes, meeting notes" />
+            <label for="noteRoleInput">Role context (optional)</label>
+            <input id="noteRoleInput" maxlength="80" placeholder="Security Engineer, SOC Analyst, etc." />
+            <label for="noteContentInput">Full notes</label>
+            <textarea id="noteContentInput" maxlength="12000" placeholder="Paste meeting notes, audit decisions, action logs, and follow-up items here."></textarea>
+            <label for="noteFileInput">Upload notes text file (optional)</label>
+            <input id="noteFileInput" type="file" accept=".txt,.md,.log,.json,.csv" />
+            <label class="noteCheckbox">
+              <input type="checkbox" id="noteAttachLatest" />
+              <span>Attach to latest interview profile</span>
+            </label>
+            <div class="noteMeta">
+              <span id="noteCharCount">0</span>/<span id="noteCharLimit">12000</span> characters
+            </div>
+            <button class="primaryButton" id="submitNoteButton" type="submit">Add repository note</button>
+            <div id="notesValidation" class="formError" hidden role="status"></div>
+          </form>
+
+          <div class="sectionBody">
+            <div class="sectionHeader repositoryHeader">
+              <h3>Captured notes</h3>
+              <span id="notesHeadline">Latest repository inputs</span>
+            </div>
+            <div id="noteList" class="noteList"></div>
+          </div>
+        </section>
+
+        <section class="view" id="timelineView">
+          <div class="sectionHeader">
+            <div>
+              <p class="eyebrow">Generated sequence</p>
+              <h2>Knowledge Timeline</h2>
+            </div>
+          </div>
+          <div id="timelineList" class="timelineList"></div>
+        </section>
+
+        <section class="view" id="graphView">
+          <div class="sectionHeader">
+            <div>
+              <p class="eyebrow">Neo4j-style view</p>
+              <h2>Knowledge Graph</h2>
+            </div>
+            <button class="secondaryButton" id="graphExportButton" type="button">Export to Neo4j</button>
+          </div>
+          <div class="graphLegend" aria-label="Graph legend">
+            <span><i class="legendDot roleDot"></i>Role</span>
+            <span><i class="legendDot systemDot"></i>System</span>
+            <span><i class="legendDot personDot"></i>Person or Team</span>
+            <span><i class="legendDot processDot"></i>Process</span>
+            <span><i class="legendDot sourceDot"></i>Knowledge Source</span>
+            <span><i class="legendDot riskDot"></i>Risk</span>
+          </div>
+          <div class="graphFrame">
+            <svg id="graphSvg" role="img" aria-label="Knowledge graph"></svg>
+          </div>
+          <div id="graphExportStatus" class="graphExportStatus" hidden role="status"></div>
+        </section>
+
+        <section class="view" id="searchView">
+          <div class="sectionHeader">
+            <div>
+              <p class="eyebrow">Ask the repository</p>
+              <h2>AI Knowledge Search</h2>
+            </div>
+          </div>
+          <form id="searchForm" class="searchBar">
+            <input id="searchInput" placeholder="Ask about risks, dependencies, timeline, or ownership" />
+            <button class="primaryButton" type="submit">Ask</button>
+          </form>
+          <div id="searchState" class="searchState" hidden></div>
+          <div id="searchResults" class="searchResults"></div>
+        </section>
+      </section>
+    </main>
+
+    <template id="emptyStateTemplate">
+      <div class="emptyState">
+        <strong>No interview captured yet.</strong>
+        <span>Start with the interview view.</span>
+      </div>
+    </template>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

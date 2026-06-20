@@ -1,0 +1,12 @@
+# Copyright (c) 2026 Vishalan Karunanithi
+#
+# All Rights Reserved.
+#
+# Unauthorized copying, modification,
+# distribution, or commercial use
+# is prohibited.
+
+data/*.db
+data/*.db-*
+__pycache__/
+*.py[cod]
