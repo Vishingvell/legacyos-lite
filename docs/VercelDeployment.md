@@ -39,6 +39,12 @@ In Vercel:
    - `LEGACYOSLITE_ALLOWED_ORIGINS` = `https://<your-vercel-domain>`
    (Optional during first validation; `VERCEL_URL` is detected automatically as fallback.)
 
+If Vercel asks for install/build fields:
+
+- Install Command: `pip install -r requirements.txt`
+- Build Command: leave empty
+- Output Directory: leave empty
+
 ## 3) Recommended deployment guardrails
 
 - Keep the repo private.
