@@ -1030,6 +1030,31 @@ async function submitSearch(event) {
   searchButton.disabled = true;
   searchButton.textContent = "Searching...";
   setSearchState("Querying interview profile and repository notes...");
+  try {
+    const result = await requestSearchAnswer(question);
+    input.value = "";
+    setSearchState("Search complete.");
+    renderSearchResult(result);
+  } catch (error) {
+    try {
+      const recovered = await recoverSearchAfterProfileError(error, question);
+      if (recovered) {
+        input.value = "";
+        setSearchState("Search recovered after refreshing profile context.");
+        renderSearchResult(recovered);
+      } else {
+        setSearchState(`<strong>Search failed:</strong> ${escapeHtml(error.message || "Unable to answer right now.")}`);
+      }
+    } catch (recoveryError) {
+      setSearchState(`<strong>Search failed:</strong> ${escapeHtml(recoveryError.message || "Unable to recover profile context.")}`);
+    }
+  } finally {
+    searchButton.disabled = false;
+    searchButton.textContent = "Ask";
+  }
+}
+
+async function requestSearchAnswer(question) {
   const payload = {
     question,
     include_repository_notes: true
@@ -1040,20 +1065,26 @@ async function submitSearch(event) {
   if (state.latest?.role) {
     payload.role = state.latest.role;
   }
-  try {
-    const result = await api("/api/search", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-    input.value = "";
-    setSearchState("Search complete.");
-    renderSearchResult(result);
-  } catch (error) {
-    setSearchState(`<strong>Search failed:</strong> ${error.message || "Unable to answer right now."}`);
-  } finally {
-    searchButton.disabled = false;
-    searchButton.textContent = "Ask";
+  return api("/api/search", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+async function recoverSearchAfterProfileError(error, question) {
+  const message = String(error?.message || "");
+  if (!message.includes("Interview not found") && !message.includes("No interview found")) {
+    return null;
   }
+  const previousRole = state.latest?.role || "";
+  await refreshProfiles();
+  if (!state.profiles.length) {
+    throw new Error("The Vercel demo data appears to have reset. Please regenerate a profile or run locally for persistent storage.");
+  }
+  const replacement = state.profiles.find((profile) => profile.role === previousRole) || state.profiles[0];
+  state.latest = await api(`/api/interviews/${encodeURIComponent(replacement.id)}`);
+  await refreshGeneratedViews({ refreshProfileDirectory: false });
+  return requestSearchAnswer(question);
 }
 
 function profileScopedPath(basePath) {

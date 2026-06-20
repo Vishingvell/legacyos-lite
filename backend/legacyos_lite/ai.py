@@ -934,13 +934,6 @@ def _repository_incident_answer(note: dict[str, Any], timeline_events: list[dict
     if not focused:
         focused = sentences[:3]
 
-    timeline_context = ""
-    if timeline_events:
-        timeline_context = " Timeline context: " + "; ".join(
-            f"{event.get('date_label', 'N/A')}: {event.get('title', 'Event')}"
-            for event in timeline_events[:3]
-        ) + "."
-
     if "false positive" in normalized_content or "no attacker" in normalized_content:
         lead = (
             "The incident was treated as a false positive because the repository note shows the suspicious "
@@ -954,7 +947,7 @@ def _repository_incident_answer(note: dict[str, Any], timeline_events: list[dict
     else:
         lead = "The repository note points to this explanation: "
 
-    return (lead + " ".join(focused) + timeline_context).strip()
+    return (lead + " ".join(focused)).strip()
 
 
 def _repository_risk_answer(note: dict[str, Any], risk_level: str | None, risk_score: int | None) -> str:
