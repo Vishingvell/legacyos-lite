@@ -330,6 +330,8 @@ def search(payload: SearchRequest) -> dict[str, Any]:
     notes = []
     if payload.include_repository_notes:
         notes = get_repository_notes(limit=12, interview_id=interview["id"])
+        if not notes:
+            notes = get_repository_notes(limit=12)
     result = answer_question(payload.question, interview, interview["entities"], notes)
     answer = result["answer"] if isinstance(result, dict) else result
     saved = save_search_query(interview["id"], payload.question, answer)

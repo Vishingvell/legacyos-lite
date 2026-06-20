@@ -117,20 +117,6 @@ button {
   color: #ffffff;
 }
 
-.sprintBadge {
-  margin-top: auto;
-  display: grid;
-  gap: 4px;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-}
-
-.sprintBadge span {
-  color: #b8c7bd;
-  font-size: 0.8rem;
-}
-
 .mainArea {
   min-width: 0;
   padding: 28px;
@@ -688,12 +674,13 @@ input {
 }
 
 .graphFrame {
-  min-height: 590px;
+  min-height: 680px;
   margin-top: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
   box-shadow: var(--shadow);
+  overflow: auto;
 }
 
 .graphLegend {
@@ -739,8 +726,9 @@ input {
 
 #graphSvg {
   display: block;
+  min-width: 1040px;
   width: 100%;
-  height: 590px;
+  height: 680px;
 }
 
 .graphExportStatus {
@@ -849,14 +837,6 @@ input {
 
 .emptyState strong {
   color: var(--ink);
-}
-
-.sprintBadge {
-  gap: 6px;
-}
-
-.sprintBadge strong {
-  letter-spacing: 0;
 }
 
 .formError[hidden],

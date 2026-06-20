@@ -751,12 +751,10 @@ function renderGraph() {
     return;
   }
 
-  const width = svg.clientWidth || 900;
-  const height = svg.clientHeight || 590;
+  const width = Math.max(svg.clientWidth || 0, 1120);
+  const height = Math.max(svg.clientHeight || 0, 680);
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const minCanvas = Math.min(width, height);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   const groups = ["Role", "System", "Person or Team", "Process", "Knowledge Source", "Risk"];
   const groupedNodes = Object.fromEntries(groups.map((group) => [group, []]));
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -766,91 +764,51 @@ function renderGraph() {
     groupedNodes[bucket].push(node);
   });
 
-  const ringRadiusByGroup = {
-    Role: 0,
-    System: minCanvas * 0.13,
-    "Person or Team": minCanvas * 0.25,
-    Process: minCanvas * 0.34,
-    "Knowledge Source": minCanvas * 0.43,
-    Risk: minCanvas * 0.24,
+  const laneConfig = {
+    System: { x: width * 0.18, yMin: 105, yMax: height - 105 },
+    "Person or Team": { x: width * 0.36, yMin: 125, yMax: height - 125 },
+    Role: { x: width * 0.50, yMin: height / 2, yMax: height / 2 },
+    Process: { x: width * 0.64, yMin: 125, yMax: height - 125 },
+    "Knowledge Source": { x: width * 0.79, yMin: 105, yMax: height - 105 },
+    Risk: { x: width * 0.91, yMin: 150, yMax: height - 150 }
   };
 
   const placed = [];
-  groups.forEach((group, groupIndex) => {
+  groups.forEach((group) => {
     const members = groupedNodes[group];
     if (!members.length) {
       return;
     }
-    if (group === "Role") {
-      const role = members[0];
-      placed.push({ ...role, x: centerX, y: centerY, radius: 0, angle: 0 });
-      return;
-    }
-    const availableNodes = members.length;
-    const sectorCenter = (Math.PI * 2 / Math.max(groups.length, 1)) * groupIndex;
-    const baseRadius = ringRadiusByGroup[group] || minCanvas * 0.29;
+    const lane = laneConfig[group] || laneConfig["Knowledge Source"];
+    const step = members.length > 1 ? (lane.yMax - lane.yMin) / (members.length - 1) : 0;
     members.forEach((node, index) => {
-      const angularOffset = ((Math.PI * 2) / Math.max(availableNodes, 1)) * index;
-      const jitter = Math.random() * 0.22 - 0.11;
-      const angle = sectorCenter + angularOffset + jitter;
-      const radius = baseRadius + (Math.random() * 14 - 7);
       placed.push({
         ...node,
-        x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * radius,
-        radius,
-        angle,
+        x: lane.x,
+        y: clamp(lane.yMin + step * index, 70, height - 70),
       });
     });
   });
 
-  for (let pass = 0; pass < 18; pass++) {
-    for (let i = 0; i < placed.length; i++) {
-      const nodeA = placed[i];
-      if (nodeA.group === "Role") {
-        continue;
-      }
-      for (let j = i + 1; j < placed.length; j++) {
-        const nodeB = placed[j];
-        if (nodeB.group === "Role" && i === 0) {
-          continue;
-        }
-        const dx = nodeA.x - nodeB.x;
-        const dy = nodeA.y - nodeB.y;
-        const distance = Math.hypot(dx, dy) || 1;
-        const required = nodeA.group === nodeB.group ? 120 : 105;
-        if (distance < required) {
-          const overlap = (required - distance) / distance;
-          const force = 0.55 * overlap;
-          const moveX = (dx / distance) * force;
-          const moveY = (dy / distance) * force;
-          nodeA.x += moveX;
-          nodeA.y += moveY;
-          nodeB.x -= moveX;
-          nodeB.y -= moveY;
-        }
-      }
-    }
-    placed.forEach((node) => {
-      if (node.group === "Role") {
-        node.x = centerX;
-        node.y = centerY;
-        return;
-      }
-      const targetRadius = ringRadiusByGroup[node.group] || minCanvas * 0.29;
-      const currentRadius = Math.hypot(node.x - centerX, node.y - centerY);
-      const radiusDelta = currentRadius - targetRadius;
-      const stableRadius = (targetRadius || 1);
-      node.x -= ((node.x - centerX) / stableRadius) * (radiusDelta * 0.16);
-      node.y -= ((node.y - centerY) / stableRadius) * (radiusDelta * 0.16);
-      node.x = clamp(node.x, 30, width - 30);
-      node.y = clamp(node.y, 30, height - 30);
-    });
-  }
-
   const byId = new Map();
   placed.forEach((node) => {
     byId.set(node.id, node);
+  });
+
+  groups.forEach((group) => {
+    const lane = laneConfig[group];
+    if (!lane || !groupedNodes[group]?.length) {
+      return;
+    }
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", lane.x);
+    label.setAttribute("y", 42);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("font-size", "13");
+    label.setAttribute("font-weight", "800");
+    label.setAttribute("fill", groupColors[group] || "#617064");
+    label.textContent = group;
+    svg.appendChild(label);
   });
 
   links.forEach((link) => {
@@ -869,33 +827,18 @@ function renderGraph() {
     line.setAttribute("y2", target.y);
     line.setAttribute("stroke", strokeColor);
     line.setAttribute("stroke-width", String(strokeWidth));
-    line.setAttribute("opacity", "0.92");
+    line.setAttribute("opacity", "0.48");
     line.setAttribute("stroke-linecap", "round");
     line.setAttribute("title", `${link.evidence || "No evidence summary"}`);
-
-    const midpointX = (source.x + target.x) / 2;
-    const midpointY = (source.y + target.y) / 2;
-    const labelText = `${(link.label_readable || link.label || "Related").slice(0, 24)} (${Math.round(linkConfidence * 100)}%)`;
-    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    label.setAttribute("x", midpointX);
-    label.setAttribute("y", midpointY);
-    label.setAttribute("text-anchor", "middle");
-    label.setAttribute("font-size", "10.5");
-    label.setAttribute("fill", "#33413b");
-    label.setAttribute("font-family", "Inter, ui-sans-serif, system-ui");
-    label.classList.add("graphEdgeLabel");
-    label.textContent = labelText;
     const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
     const sourceText = link.source_name || "";
     const targetText = link.target_name || "";
     const route = [sourceText, targetText].filter(Boolean).join(" -> ");
     const relationEvidence = link.evidence || "No evidence captured";
-    title.textContent = `${route}: ${relationEvidence}`;
-    label.appendChild(title);
-    label.setAttribute("pointer-events", "none");
+    title.textContent = `${route}: ${link.label_readable || link.label || "Related"} - ${relationEvidence}`;
+    line.appendChild(title);
 
     svg.appendChild(line);
-    svg.appendChild(label);
   });
 
   placed.forEach((node) => {
@@ -903,17 +846,18 @@ function renderGraph() {
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("cx", node.x);
     circle.setAttribute("cy", node.y);
-    circle.setAttribute("r", node.group === "Role" ? "36" : "26");
+    circle.setAttribute("r", node.group === "Role" ? "34" : "22");
     circle.setAttribute("fill", groupColors[node.group] || "#617064");
     circle.setAttribute("stroke", "#ffffff");
     circle.setAttribute("stroke-width", "3");
 
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("x", node.x);
-    text.setAttribute("y", node.group === "Role" ? node.y + 56 : node.y + 44);
+    text.setAttribute("y", node.group === "Role" ? node.y + 54 : node.y + 38);
     text.setAttribute("text-anchor", "middle");
     text.setAttribute("fill", "#17211b");
-    text.setAttribute("font-size", node.group === "Role" ? "13" : "12");
+    text.setAttribute("font-size", node.group === "Role" ? "13" : "11");
+    text.setAttribute("font-weight", node.group === "Role" ? "800" : "700");
     text.textContent = trimLabel(node.label);
     const nodeTitle = `${node.label} (${node.group || "Knowledge"}), confidence ${Math.round((Number(node.confidence) || 0.7) * 100)}%`;
     const title = document.createElementNS("http://www.w3.org/2000/svg", "title");

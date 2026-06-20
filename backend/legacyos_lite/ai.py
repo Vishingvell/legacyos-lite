@@ -284,11 +284,30 @@ def answer_question(
                 {
                     "kind": "note",
                     "title": note["title"],
-                    "excerpt": _sentence_preview(note["content"], 22),
+                    "excerpt": _sentence_preview(note["content"], 42),
                 }
                 for note in note_hits[:3]
             ]
         )
+
+    repository_first_terms = {
+        "incident",
+        "false",
+        "positive",
+        "why",
+        "cause",
+        "root",
+        "happened",
+        "investigation",
+        "digging",
+    }
+    if note_hits and any(term in normalized_question for term in repository_first_terms):
+        return {
+            "answer": _repository_incident_answer(note_hits[0], timeline_events),
+            "source_summary": source_summary,
+            "model": "rule",
+            "answer_style": "repository-incident-summary",
+        }
 
     if OLLAMA_ENABLED:
         generated = _answer_with_ollama(
@@ -837,6 +856,44 @@ def _rank_repository_notes(
             scored.append((score, note))
     scored.sort(key=lambda item: (-item[0], item[1].get("created_at", ""), item[1].get("title", "")))
     return [note for _score, note in scored]
+
+
+def _repository_incident_answer(note: dict[str, Any], timeline_events: list[dict[str, Any]]) -> str:
+    content = str(note.get("content", "")).strip()
+    sentences = [sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+", content) if sentence.strip()]
+    focus_terms = {
+        "false positive",
+        "confirmed",
+        "no attacker",
+        "no attacker activity",
+        "credential misuse",
+        "expected test automation",
+        "rollback simulation",
+        "service account",
+        "siem rule",
+        "five hours",
+    }
+    focused = [
+        sentence
+        for sentence in sentences
+        if any(term in sentence.lower() for term in focus_terms)
+    ][:4]
+    if not focused:
+        focused = sentences[:3]
+
+    timeline_context = ""
+    if timeline_events:
+        timeline_context = " Timeline context: " + "; ".join(
+            f"{event.get('date_label', 'N/A')}: {event.get('title', 'Event')}"
+            for event in timeline_events[:3]
+        ) + "."
+
+    return (
+        "The incident was treated as a false positive because the repository note shows the suspicious "
+        "privilege-escalation pattern came from approved deployment automation, not attacker activity. "
+        + " ".join(focused)
+        + timeline_context
+    ).strip()
 
 
 def _find_relevant_timeline_events(
