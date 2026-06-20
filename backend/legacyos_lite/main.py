@@ -107,6 +107,16 @@ def index() -> FileResponse:
     return FileResponse(PUBLIC_ROOT / "index.html")
 
 
+@app.get("/styles.css")
+def styles() -> FileResponse:
+    return FileResponse(PUBLIC_ROOT / "styles.css")
+
+
+@app.get("/app.js")
+def app_script() -> FileResponse:
+    return FileResponse(PUBLIC_ROOT / "app.js")
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "product": "LegacyOS Lite"}
