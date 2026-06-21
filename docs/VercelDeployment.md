@@ -12,6 +12,7 @@ This repo can be deployed to Vercel as a hackathon review app while keeping the 
 - LegacyOS Lite FastAPI API served through a Vercel Python function.
 - Static frontend served from `public/`.
 - SQLite data stored in Vercel runtime temp storage (suitable for demo sessions).
+- Demo-safe Cloud Engineer and SOC Analyst seed data when the database is empty.
 
 Note:
 `/api/index.py` points SQLite to `/tmp/legacyoslite.db`, which is ephemeral in serverless hosting.
@@ -49,6 +50,8 @@ Optional environment variable:
 
 - `LEGACYOSLITE_ALLOWED_ORIGINS` = `https://<your-vercel-domain>`
   (Usually not required for same-origin app usage. `VERCEL_URL` is detected automatically.)
+- `LEGACYOSLITE_SEED_DEMO_DATA` = `false`
+  (Only use this if you want the review app to start with no sample profiles or notes.)
 
 ## 3) Recommended deployment guardrails
 

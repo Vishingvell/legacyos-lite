@@ -60,6 +60,12 @@ MIN_ANSWER_CHARS = 80
 MAX_ANSWER_CHARS = 2200
 MIN_NOTE_CHARS = 25
 MAX_NOTE_CHARS = 12000
+DEMO_SEED_ENABLED = os.getenv("LEGACYOSLITE_SEED_DEMO_DATA", "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
 
 
 app = FastAPI(title="LegacyOS Lite", version="0.1.0")
@@ -92,7 +98,77 @@ def _ensure_database_ready() -> None:
     global _database_ready
     if not _database_ready:
         initialize_database()
+        if DEMO_SEED_ENABLED:
+            _seed_demo_data_if_empty()
         _database_ready = True
+
+
+def _seed_demo_data_if_empty() -> None:
+    if list_interview_summaries(limit=1):
+        return
+
+    seeded_interviews: dict[str, dict[str, Any]] = {}
+    for role_name, answers in _demo_interview_answers().items():
+        generated = generate_interview_package(role_name, answers)
+        seeded_interviews[role_name] = save_interview(role_name, answers, generated)
+
+    for note in _demo_repository_notes(seeded_interviews):
+        save_repository_note(**note)
+
+
+def _demo_interview_answers() -> dict[str, dict[str, str]]:
+    cloud_answers = [
+        "I regularly support AWS production accounts, CloudFront distributions, S3 static asset hosting, GitHub Actions deployment pipelines, IAM release roles, and dashboard environments used by the review team.",
+        "Frontend dashboard releases, cache invalidation, rollback verification, and deployment health checks would slow down if I were unavailable because the release path still needs cloud context.",
+        "A replacement should understand that stale CloudFront cache can look like a failed deployment, expired AWS role sessions can skip invalidation, and rollback validation must check served assets.",
+        "The important material is in the CloudFront release runbook, GitHub Actions workflow notes, deployment checklist screenshots, and incident review notes kept in the knowledge repository.",
+        "The frontend lead, DevOps backup, security engineer reviewing IAM permissions, and product demo owner depend on this knowledge; one backup engineer can cover after guided handover.",
+    ]
+    soc_answers = [
+        "I use SIEM alerts, IAM audit logs, GitHub workflow events, service account activity, and incident queue dashboards as the core monitoring assets for deployment-related security signals.",
+        "In the first thirty minutes I preserve event IDs, compare timestamps against approved deployment windows, check the service account owner, and decide whether escalation is needed.",
+        "The next analyst should focus on CI/CD false positives, privilege-escalation wording from approved automation, missing workflow run IDs, and blind spots in deployment alert context.",
+        "Mandatory playbooks include preserving SIEM evidence, collecting IAM audit records, checking GitHub workflow run IDs, documenting containment decisions, and escalating uncertain cases.",
+        "Shift handover goes to the security engineer and application developer, and the context that must never be lost is whether the suspicious activity came from approved automation.",
+    ]
+    return {
+        "Cloud Engineer": dict(zip(ROLE_QUESTIONS["Cloud Engineer"], cloud_answers)),
+        "SOC Analyst": dict(zip(ROLE_QUESTIONS["SOC Analyst"], soc_answers)),
+    }
+
+
+def _demo_repository_notes(interviews: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    cloud_interview = interviews["Cloud Engineer"]
+    soc_interview = interviews["SOC Analyst"]
+    return [
+        {
+            "title": "CloudFront cache incident review",
+            "source": "Platform incident meeting notes",
+            "role": "Cloud Engineer",
+            "interview_id": cloud_interview["id"],
+            "content": (
+                "Customers saw outdated dashboard assets after deployment because CloudFront cache "
+                "invalidation was skipped. The deployment was not a failed build. The GitHub Actions "
+                "workflow used an expired AWS role session, so the Cloud Engineer manually invalidated "
+                "CloudFront paths and rotated deployment role credentials. Follow-up work: document the "
+                "cache purge process, add rollback validation screenshots, and train one backup engineer "
+                "on CloudFront release checks."
+            ),
+        },
+        {
+            "title": "SOC false positive incident review",
+            "source": "SOC incident review meeting notes",
+            "role": "SOC Analyst",
+            "interview_id": soc_interview["id"],
+            "content": (
+                "The SOC incident was confirmed as a false positive after five hours of investigation "
+                "because service account activity came from approved CI/CD automation, not attacker "
+                "activity. Follow-up work: document SIEM false-positive criteria, preserve IAM audit "
+                "evidence, and clarify escalation ownership between SOC, security engineering, and the "
+                "application developer."
+            ),
+        },
+    ]
 
 
 app.add_middleware(

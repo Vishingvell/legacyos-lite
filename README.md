@@ -51,6 +51,13 @@ Then open in your local browser:
 http://localhost:8010
 ```
 
+Fresh databases automatically seed demo-safe Cloud Engineer and SOC Analyst
+profiles with matching repository notes. Disable this with:
+
+```bash
+LEGACYOSLITE_SEED_DEMO_DATA=false
+```
+
 Deployment options:
 
 - Fast local demo:
@@ -66,7 +73,9 @@ Deployment options:
   3. Use `docs/VercelDeployment.md` for setup steps.
 
 The Vercel setup is suitable for hackathon demo exposure, but data persistence is
-SQLite-backed and ephemeral in serverless runtime by default.
+SQLite-backed and ephemeral in serverless runtime by default. Empty Vercel
+runtimes seed demo-safe sample data so reviewers can immediately test search,
+timeline, graph, and repository evidence.
 
 ## Stack
 
