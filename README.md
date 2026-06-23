@@ -77,6 +77,28 @@ If the current dashboard profile is SOC Analyst but the question asks about Clou
 
 This prevents one role's notes from overwhelming or contaminating another role's answers.
 
+## Validated Local Search Scenarios
+
+The local search scoping check creates multiple fake profiles and repository
+meeting notes, then asks questions while a different profile is active. These
+results confirm that search routes to the right profile and avoids unrelated
+repository evidence.
+
+| Question | Active profile | Profile used | Evidence source |
+|---|---|---|---|
+| Why did customers see outdated dashboard assets after the CloudFront deployment? | SOC Analyst | Cloud Engineer | CloudFront cache incident review |
+| Why was the SOC alert confirmed as a false positive? | Cloud Engineer | SOC Analyst | SOC false positive incident review |
+| What fixed the DNS rollback outage for VPN access? | Cloud Engineer | System Administrator | DNS rollback outage review |
+| What caused the API worker memory leak around token refresh jobs? | Security Engineer | Software Developer | API worker memory leak review |
+| Why was the WAF vulnerability exception approved only temporarily? | Software Developer | Security Engineer | WAF exception review |
+| Which allergy substitution was escalated for the renal diet patient? | Manager | Dietician | Allergy substitution handoff |
+
+Run the same check locally with:
+
+```bash
+PYTHONPATH=backend ../.venv/bin/python tools/search_scope_smoke.py
+```
+
 ## Data Handling
 
 LegacyOS Lite stores captured data in SQLite by default.
@@ -137,7 +159,60 @@ Run the multi-profile search scoping check:
 PYTHONPATH=backend ../.venv/bin/python tools/search_scope_smoke.py
 ```
 
-The search scoping check creates Cloud Engineer, SOC Analyst, and System Administrator profiles with separate repository notes, then verifies that cross-role questions retrieve the correct profile and do not leak unrelated evidence.
+The search scoping check creates Cloud Engineer, SOC Analyst, System
+Administrator, Software Developer, Security Engineer, Dietician, and Manager
+profiles with separate repository notes, then verifies that cross-role questions
+retrieve the correct profile and do not leak unrelated evidence.
+
+## Adding a New Profile Type
+
+LegacyOS Lite profiles are role-driven. To add a new role for testing or review,
+update the role definition, search routing hints, and search-scope test data
+together.
+
+1. Add the role interview prompts in `backend/legacyos_lite/ai.py`.
+
+   Update `ROLE_QUESTIONS` with five practical questions for the new role. The
+   questions should capture systems, workflows, incidents, documentation, and
+   dependencies.
+
+2. Add role search hints in `backend/legacyos_lite/main.py`.
+
+   Update `ROLE_SEARCH_HINTS` with domain-specific words that should route
+   searches to that profile. Use concrete terms, not generic words. For example,
+   a Cloud Engineer profile can use `cloudfront`, `aws`, and `invalidation`;
+   a SOC Analyst profile can use `siem`, `alert`, and `false`.
+
+3. Add a local test profile in `tools/search_scope_smoke.py`.
+
+   Add entries to:
+
+   - `PROFILE_ANSWERS`
+   - `REPOSITORY_NOTES`
+   - `SCENARIOS`
+
+   Each scenario should ask a question while a different profile is active, then
+   verify that search routes to the expected profile and evidence source.
+
+4. Run the verification commands.
+
+   ```bash
+   python3 -m py_compile backend/legacyos_lite/ai.py backend/legacyos_lite/main.py tools/search_scope_smoke.py
+   PYTHONPATH=backend ../.venv/bin/python tools/search_scope_smoke.py
+   ```
+
+5. Test through the browser.
+
+   To keep the richer local test database for UI testing:
+
+   ```bash
+   LEGACYOSLITE_SEARCH_SCOPE_KEEP_DB=true PYTHONPATH=backend ../.venv/bin/python tools/search_scope_smoke.py
+   LEGACYOSLITE_DB_PATH=data/legacyoslite.search-scope.db LEGACYOSLITE_SEED_DEMO_DATA=false PYTHONPATH=backend ../.venv/bin/uvicorn legacyos_lite.main:app --reload --port 8010
+   ```
+
+   Then open `http://localhost:8010`, go to Search, and ask the scenario
+   questions listed above. The answer should show the expected `Profile used`
+   and the expected repository evidence source.
 
 ## Main Components
 
