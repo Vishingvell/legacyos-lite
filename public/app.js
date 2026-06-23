@@ -1111,6 +1111,12 @@ function renderSearchResult(result) {
   card.className = "answerCard";
   const sources = Array.isArray(result.source_summary) ? result.source_summary : [];
   const when = result.created_at ? `<p class="searchModel">Asked: ${escapeHtml(result.created_at)}</p>` : "";
+  const profileLabel = result.selected_role
+    ? `<p class="searchModel">Profile used: ${escapeHtml(result.selected_role)}</p>`
+    : "";
+  const routeLabel = result.routed_from_role
+    ? `<p class="searchModel">Search routed from ${escapeHtml(result.routed_from_role)} to the strongest matching profile.</p>`
+    : "";
   const sourceHtml = sources.length
     ? `<div class="searchSources"><strong>Evidence you can inspect:</strong>${sources
         .map((source) => renderSourceDetail(source))
@@ -1121,6 +1127,8 @@ function renderSearchResult(result) {
     <strong>${escapeHtml(result.question)}</strong>
     ${when}
     ${modelLabel}
+    ${profileLabel}
+    ${routeLabel}
     <p>${escapeHtml(result.answer)}</p>
     ${sourceHtml}
   `;

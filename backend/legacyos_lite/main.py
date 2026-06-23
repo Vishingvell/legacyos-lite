@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import os
+import re
 from typing import Any
 
 from fastapi import Request
@@ -65,6 +66,139 @@ DEMO_SEED_ENABLED = os.getenv("LEGACYOSLITE_SEED_DEMO_DATA", "1").strip().lower(
     "false",
     "no",
     "off",
+}
+SEARCH_ROUTE_MIN_SCORE = 4
+SEARCH_ROUTE_MARGIN = 3
+SEARCH_STOP_WORDS = {
+    "about",
+    "after",
+    "again",
+    "also",
+    "and",
+    "are",
+    "before",
+    "between",
+    "could",
+    "did",
+    "does",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "how",
+    "into",
+    "our",
+    "should",
+    "that",
+    "the",
+    "their",
+    "there",
+    "this",
+    "was",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "why",
+    "with",
+    "would",
+}
+SEARCH_GENERIC_TOKENS = {
+    "answer",
+    "cause",
+    "context",
+    "dependency",
+    "dependencies",
+    "happened",
+    "incident",
+    "issue",
+    "meeting",
+    "note",
+    "notes",
+    "people",
+    "problem",
+    "repository",
+    "risk",
+    "risks",
+    "team",
+    "teams",
+}
+ROLE_SEARCH_HINTS = {
+    "Cloud Engineer": {
+        "aws",
+        "cache",
+        "cloud",
+        "cloudfront",
+        "deployment",
+        "frontend",
+        "github",
+        "invalidation",
+        "pipeline",
+        "rollback",
+        "s3",
+    },
+    "SOC Analyst": {
+        "alert",
+        "attacker",
+        "automation",
+        "ci",
+        "cicd",
+        "evidence",
+        "false",
+        "iam",
+        "positive",
+        "service",
+        "siem",
+        "soc",
+    },
+    "System Administrator": {
+        "active",
+        "backup",
+        "directory",
+        "dns",
+        "identity",
+        "patch",
+        "server",
+        "vpn",
+    },
+    "Security Engineer": {
+        "compliance",
+        "control",
+        "controls",
+        "policy",
+        "security",
+        "threat",
+        "vulnerability",
+    },
+    "Software Developer": {
+        "api",
+        "code",
+        "debug",
+        "developer",
+        "pull",
+        "release",
+        "repo",
+        "repository",
+    },
+    "Dietician": {
+        "care",
+        "clinical",
+        "diet",
+        "nutrition",
+        "patient",
+        "substitution",
+    },
+    "Manager": {
+        "approval",
+        "coordination",
+        "decision",
+        "manager",
+        "program",
+        "stakeholder",
+        "vendor",
+    },
 }
 
 
@@ -418,7 +552,8 @@ def timeline(interview_id: str | None = None, role: str | None = None) -> dict[s
 @app.post("/api/search")
 def search(payload: SearchRequest) -> dict[str, Any]:
     role_name = _normalize_role(payload.role)
-    interview = _load_interview_or_latest(payload.interview_id, role_name, allow_stale_fallback=True)
+    requested_interview = _load_interview_or_latest(payload.interview_id, role_name, allow_stale_fallback=True)
+    interview = _route_search_interview(payload.question, requested_interview)
     notes = []
     if payload.include_repository_notes:
         notes = get_relevant_repository_notes(
@@ -433,7 +568,11 @@ def search(payload: SearchRequest) -> dict[str, Any]:
         **saved,
         "risk_level": interview["risk_level"],
         "risk_score": interview["risk_score"],
+        "selected_role": interview["role"],
+        "selected_interview_id": interview["id"],
     }
+    if requested_interview["id"] != interview["id"]:
+        response["routed_from_role"] = requested_interview["role"]
     if isinstance(result, dict):
         response.update(result)
     return response
@@ -528,6 +667,91 @@ def _load_interview_or_latest(
     except LookupError:
         raise HTTPException(status_code=404, detail="Interview not found.")
     raise HTTPException(status_code=404, detail="No interview found.")
+
+
+def _route_search_interview(question: str, current_interview: dict[str, Any]) -> dict[str, Any]:
+    routed_role = _best_search_role(question, current_interview)
+    if routed_role is None or routed_role == current_interview.get("role"):
+        return current_interview
+    routed_interview = get_latest_interview_by_role(routed_role)
+    return routed_interview or current_interview
+
+
+def _best_search_role(question: str, current_interview: dict[str, Any]) -> str | None:
+    tokens = _search_tokens(question)
+    if not tokens:
+        return None
+
+    summaries = list_interview_summaries(limit=200)
+    if not summaries:
+        return None
+
+    notes = get_repository_notes(limit=200)
+    notes_by_role: dict[str, list[dict[str, Any]]] = {}
+    for note in notes:
+        note_role = _normalize_role(note.get("role"))
+        if note_role:
+            notes_by_role.setdefault(note_role, []).append(note)
+
+    scored_roles: list[tuple[int, str]] = []
+    for summary in summaries:
+        role = summary.get("role", "")
+        score = _search_role_score(tokens, role, summary, notes_by_role.get(role, []))
+        scored_roles.append((score, role))
+
+    if not scored_roles:
+        return None
+
+    scored_roles.sort(key=lambda item: (-item[0], item[1]))
+    best_score, best_role = scored_roles[0]
+    current_role = str(current_interview.get("role") or "")
+    current_score = next((score for score, role in scored_roles if role == current_role), 0)
+    if best_score >= SEARCH_ROUTE_MIN_SCORE and best_score >= current_score + SEARCH_ROUTE_MARGIN:
+        return best_role
+    return current_role or None
+
+
+def _search_tokens(question: str) -> list[str]:
+    raw_tokens = re.findall(r"[a-z0-9]+", question.lower())
+    return [
+        token
+        for token in raw_tokens
+        if len(token) > 2 and token not in SEARCH_STOP_WORDS and token not in SEARCH_GENERIC_TOKENS
+    ]
+
+
+def _search_role_score(
+    tokens: list[str],
+    role: str,
+    summary: dict[str, Any],
+    notes: list[dict[str, Any]],
+) -> int:
+    role_hints = ROLE_SEARCH_HINTS.get(role, set())
+    score = sum(4 for token in tokens if token in role_hints)
+    role_text = role.lower()
+    score += sum(5 for token in tokens if token in role_text)
+
+    profile_text = " ".join(
+        [
+            str(summary.get("summary", "")),
+            " ".join(str(entity) for entity in summary.get("top_entities", [])),
+            str(summary.get("coverage", "")),
+        ]
+    ).lower()
+    score += sum(2 for token in tokens if token in profile_text)
+
+    note_text = " ".join(
+        " ".join(
+            [
+                str(note.get("title", "")),
+                str(note.get("source", "")),
+                str(note.get("content", "")),
+            ]
+        )
+        for note in notes
+    ).lower()
+    score += sum(3 for token in tokens if token in note_text)
+    return score
 
 
 def _normalize_role(role: str | None) -> str | None:

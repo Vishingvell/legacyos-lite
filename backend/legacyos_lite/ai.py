@@ -178,6 +178,26 @@ _STOP_WORDS = {
     "would", "should", "could", "might", "about", "from", "into", "been", "were", "about",
     "under", "after", "before", "between", "through", "during", "into", "about", "again", "other",
 }
+_GENERIC_REPOSITORY_QUERY_TOKENS = {
+    "answer",
+    "cause",
+    "context",
+    "dependency",
+    "dependencies",
+    "happened",
+    "incident",
+    "issue",
+    "meeting",
+    "note",
+    "notes",
+    "people",
+    "problem",
+    "repository",
+    "risk",
+    "risks",
+    "team",
+    "teams",
+}
 
 
 @dataclass(frozen=True)
@@ -280,8 +300,12 @@ def answer_question(
     asks_about_risk = any(term in normalized_question for term in ("risk", "score", "exposure"))
     asks_about_dependency = any(term in normalized_question for term in ("who", "depend", "dependency", "people", "team"))
     repository_first_terms = {
+        "cache",
+        "cloudfront",
+        "dns",
         "incident",
         "false",
+        "fixed",
         "positive",
         "why",
         "cause",
@@ -289,6 +313,10 @@ def answer_question(
         "happened",
         "investigation",
         "digging",
+        "outage",
+        "resolved",
+        "rollback",
+        "vpn",
     }
 
     if asks_about_risk:
@@ -399,7 +427,7 @@ def answer_question(
             note_excerpt = ""
         return {
             "answer": f"Relevant nodes: {', '.join(matched_entities)}. {summary} {note_excerpt}".strip(),
-            "source_summary": interview_sources,
+            "source_summary": note_sources or interview_sources,
             "model": "rule",
             "answer_style": "entity-summary",
         }
@@ -879,23 +907,29 @@ def _rank_repository_notes(
 ) -> list[dict[str, Any]]:
     if not notes:
         return []
-    query_tokens = [token for token in _tokenize(normalized_question) if token not in _STOP_WORDS]
+    query_tokens = [
+        token
+        for token in _tokenize(normalized_question)
+        if token not in _STOP_WORDS and token not in _GENERIC_REPOSITORY_QUERY_TOKENS
+    ]
+    if not query_tokens:
+        return []
     scored: list[tuple[int, dict[str, Any]]] = []
     for note in notes:
-        haystack = " ".join(
-            [
-                str(note.get("title", "")),
-                str(note.get("source", "")),
-                str(note.get("content", "")),
-            ]
-        ).lower()
+        title = str(note.get("title", "")).lower()
+        source = str(note.get("source", "")).lower()
+        content = str(note.get("content", "")).lower()
         score = 0
         for token in query_tokens:
-            if token in haystack:
+            if token in title:
+                score += 4
+            if token in source:
                 score += 2
+            if token in content:
+                score += 1
         if note.get("role"):
             score += 1
-        if score > 0:
+        if score >= 3:
             scored.append((score, note))
     scored.sort(key=lambda item: (-item[0], item[1].get("created_at", ""), item[1].get("title", "")))
     return [note for _score, note in scored]
